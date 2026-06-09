@@ -1,0 +1,41 @@
+@import './styles/variables.css';
+
+:root {
+  --color-primary:       #02214E;
+  --color-primary-hover: #011534;
+  --color-secondary:     #C0E8F9;
+  --color-bg:            #F7F9FB;
+  --color-surface:       #F0F4F8;
+  --color-white:         #FFFFFF;
+  --color-text-secondary:#637083;
+  --color-label:         #5B6574;
+  --color-shadow:        rgba(3, 39, 70, 0.078);
+
+  --font-family:         'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --radius-card:   4px;
+  --radius-input:  6px;
+  --radius-button: 6px;
+
+  --shadow-card: 0px 12px 32px 0px var(--color-shadow);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}

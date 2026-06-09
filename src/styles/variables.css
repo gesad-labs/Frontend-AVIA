@@ -1,0 +1,112 @@
+/* ============================================================
+   AVIA — Design Tokens / CSS Custom Properties
+   Design System: Cobalt Deep + Manrope
+   ============================================================ */
+
+:root {
+  /* --- Brand Colors (AVIA Design System) --- */
+  --color-primary:         #02214E;  /* Cobalt Deep — buttons, headings, links */
+  --color-primary-hover:   #011534;
+  --color-secondary:       #C0E8F9;  /* Cobalt Light */
+
+  /* --- Surfaces --- */
+  --color-bg:              #F7F9FB;  /* Background — page bg */
+  --color-surface:         #F0F4F8;  /* Surface — inputs, inner cards */
+  --color-white:           #FFFFFF;  /* Pure White — cards */
+
+  /* --- Text --- */
+  --color-text-primary:    #02214E;
+  --color-text-secondary:  #637083;  /* Texto Secundário */
+  --color-label:           #5B6574;
+
+  /* --- Border --- */
+  --color-border:          #d1d5db;
+  --color-border-focus:    #02214E;
+
+  /* --- Shadow --- */
+  --color-shadow:          rgba(3, 39, 70, 0.078);
+
+  /* --- Semantic Status --- */
+  --color-success:         #22c55e;
+  --color-warning:         #f59e0b;
+  --color-danger:          #ef4444;
+  --color-info:            #3b82f6;
+
+  /* --- Sprint Health --- */
+  --color-health-green:    #22c55e;
+  --color-health-yellow:   #eab308;
+  --color-health-red:      #ef4444;
+
+  /* --- Impediment --- */
+  --color-impediment:      #ef4444;
+  --color-impediment-bg:   #fef2f2;
+  --color-resolved:        #22c55e;
+
+  /* --- Typography --- */
+  --font-family:           'Manrope', system-ui, -apple-system, sans-serif;
+  --font-family-mono:      'JetBrains Mono', 'Fira Code', monospace;
+
+  --font-size-xs:   0.75rem;   /* 12px */
+  --font-size-sm:   0.875rem;  /* 14px */
+  --font-size-base: 1rem;      /* 16px */
+  --font-size-lg:   1.125rem;  /* 18px */
+  --font-size-xl:   1.25rem;   /* 20px */
+  --font-size-2xl:  1.5rem;    /* 24px */
+  --font-size-3xl:  1.875rem;  /* 30px */
+
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+  --font-weight-extrabold: 800;
+
+  --line-height-tight:  1.25;
+  --line-height-base:   1.5;
+  --line-height-loose:  1.75;
+
+  /* --- Spacing Scale (4px base) --- */
+  --space-1:  0.25rem;  /*  4px */
+  --space-2:  0.5rem;   /*  8px */
+  --space-3:  0.75rem;  /* 12px */
+  --space-4:  1rem;     /* 16px */
+  --space-5:  1.25rem;  /* 20px */
+  --space-6:  1.5rem;   /* 24px */
+  --space-8:  2rem;     /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* --- Border Radius --- */
+  --radius-sm:      4px;
+  --radius-input:   6px;
+  --radius-button:  6px;
+  --radius-md:      8px;
+  --radius-lg:      12px;
+  --radius-xl:      16px;
+  --radius-2xl:     24px;
+  --radius-full:    9999px;
+
+  /* --- Shadows --- */
+  --shadow-sm:  0 1px 2px rgba(3, 39, 70, 0.06);
+  --shadow-md:  0 4px 12px rgba(3, 39, 70, 0.10);
+  --shadow-lg:  0px 12px 32px 0px rgba(3, 39, 70, 0.078);
+
+  /* --- Transitions --- */
+  --transition-fast:   150ms ease;
+  --transition-base:   250ms ease;
+  --transition-slow:   400ms ease;
+
+  /* --- Z-index scale --- */
+  --z-dropdown:  100;
+  --z-sticky:    200;
+  --z-modal-bg:  300;
+  --z-modal:     400;
+  --z-toast:     500;
+
+  /* --- Layout --- */
+  --sidebar-width:      260px;
+  --sidebar-collapsed:  64px;
+  --topbar-height:      56px;
+  --kanban-col-width:   300px;
+  --card-modal-width:   760px;
+}

@@ -1,0 +1,379 @@
+/* ============================================================
+   ViewPermissionsPage — RF006
+   Read-only permission view for Membro / Convidado users
+   ============================================================ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 1152px;
+  padding: 40px;
+  min-height: 100%;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  font-family: var(--font-family);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 36px;
+  letter-spacing: -0.75px;
+  color: #0F172A;                       /* Figma spec: Slate 900 */
+  margin: 0;
+}
+
+.subtitle {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);     /* 16px */
+  font-weight: var(--font-weight-regular);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 672px;
+}
+
+.subtitle strong {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* ── Two-column layout ── */
+.content {
+  display: grid;
+  grid-template-columns: 336px 1fr;   /* Figma: 4 of 12 cols = 336px */
+  gap: 32px;
+  align-items: start;
+}
+
+/* ─────────────────────────────────────────
+   Profile Column (left column wrapper)
+   = white card + note box stacked w/ gap
+───────────────────────────────────────── */
+.profileColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;                           /* Figma: gap between card and note */
+  width: 336px;
+}
+
+/* ── White card — avatar + name + badge + metadata ── */
+.profileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0px 12px 32px 0px #051A3E0A;  /* Figma spec */
+  padding: 24px;
+}
+
+/* Avatar */
+.avatarWrap {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 16px;               /* Figma: Img:margin padding-bottom: 16px */
+  width: 100%;
+}
+
+.avatar {
+  width: 96px;                        /* Figma: 96×96 */
+  height: 96px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family);
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+/* Name */
+.profileName {
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: 20px;                    /* Figma: 20px Bold */
+  font-weight: 700;
+  line-height: 28px;
+  letter-spacing: 0px;
+  color: #051A3E;                     /* Figma spec */
+  margin: 0;
+  text-align: center;
+}
+
+/* Role badge */
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;                    /* Figma: Margin padding-top: 8px */
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  background: #001946;                /* Figma spec */
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;                    /* Figma: Inter SemiBold 12px */
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 1.2px;             /* Figma spec */
+  color: #fff;
+  text-transform: uppercase;
+}
+
+/* Metadata list — spans full width inside the card */
+.metaList {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: 8px;
+}
+
+.metaRow:last-child {
+  border-bottom: none;
+}
+
+.metaLabel {
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.metaValue {
+  font-family: var(--font-family);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
+
+/* ── Nota de Acesso — sibling of card, glassmorphism overlay ── */
+.noteBox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;                          /* Figma: gap between header and text */
+  width: 336px;
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid #F4F7FC;         /* Figma spec */
+  backdrop-filter: blur(4px);        /* Figma spec */
+  -webkit-backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.noteHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;                          /* Figma: Container gap: 12px */
+}
+
+.noteIcon {
+  display: flex;
+  align-items: center;
+  color: #3B82F6;
+  flex-shrink: 0;
+}
+
+.noteTitle {
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: #051A3E;
+}
+
+.noteText {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;                    /* Figma: Inter Regular 12px */
+  font-weight: 400;
+  line-height: 19.5px;               /* Figma spec */
+  letter-spacing: 0px;
+  color: #374151;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────
+   Bento Grid (right column)
+───────────────────────────────────────── */
+.bentoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Section — wrapper with no background ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Category header — floats ABOVE the card */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 12px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);     /* 16px */
+  font-weight: var(--font-weight-bold); /* 700 — Figma spec */
+  line-height: 24px;
+  color: var(--color-text-primary);
+}
+
+.sectionIcon {
+  display: flex;
+  align-items: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* White card — contains only permission rows */
+.sectionCard {
+  background: var(--color-white);
+  border-radius: var(--radius-md);      /* 8px */
+  box-shadow: 0px 12px 32px 0px #051A3E05;
+  overflow: hidden;
+}
+
+/* ── Access badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;                   /* Figma spec */
+  border-radius: 2px;                 /* Figma spec — not pill */
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;                    /* Figma spec */
+  line-height: 15px;
+  letter-spacing: -0.5px;            /* Figma spec */
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ACESSO TOTAL — not in Figma spec, follow same pattern */
+.badgeTotal {
+  background: #D1FAE5;
+  color: #065F46;
+  font-weight: 700;
+}
+
+/* ACESSO QUASE TOTAL — Figma: bg #AFECFF, text #001F27, weight 700 */
+.badgeAlmost {
+  background: #AFECFF;
+  color: #001F27;
+  font-weight: 700;
+}
+
+/* LIMITADO — Figma: bg #CDDDFF, text #51617E, weight 600 */
+.badgeLimited {
+  background: #CDDDFF;
+  color: #51617E;
+  font-weight: 600;
+}
+
+/* SEM ACESSO — keep colors, container follows same pattern */
+.badgeNone {
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+/* ── Permission rows (direct children of .sectionCard) ── */
+.permRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background var(--transition-fast);
+}
+
+.permRow:last-child {
+  border-bottom: none;
+}
+
+.permRow:hover {
+  background: #fafbfc;
+}
+
+.permInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.permLabel {
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);       /* 14px */
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.permDesc {
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);       /* 12px */
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.permStatus {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────
+   Responsive
+───────────────────────────────────────── */
+@media (max-width: 900px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .profileCard {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}

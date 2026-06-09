@@ -1,0 +1,267 @@
+/* Page */
+.page {
+  flex: 1;
+  padding: 40px 48px;
+  background: #F8FAFC;
+  min-height: 0;
+  overflow-y: auto;
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Header */
+.header {
+  max-width: 1024px;
+  margin-bottom: 28px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #02214E;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: #637083;
+  line-height: 1.5;
+}
+
+/* Cards list */
+.list {
+  max-width: 1024px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Card */
+.card {
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.15s;
+}
+
+.cardExpanded {
+  box-shadow: 0px 4px 12px rgba(2, 33, 78, 0.08);
+  border-color: #d1d9e8;
+}
+
+/* Card header button */
+.cardHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.cardHeader:hover {
+  background: #F8FAFC;
+}
+
+/* Member avatar */
+.memberAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #C0E8F9;
+  color: #02214E;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.memberInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.memberName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.memberEmail {
+  font-size: 12px;
+  font-weight: 400;
+  color: #637083;
+}
+
+/* Role badge */
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: #ffffff;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.cardChevron {
+  color: #9ca3af;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Card body */
+.cardBody {
+  border-top: 1px solid #F0F4F8;
+  padding: 24px 20px 20px;
+}
+
+/* Permission groups grid */
+.groupsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.group {}
+
+.groupTitle {
+  margin: 0 0 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  color: #637083;
+}
+
+.permList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.permRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.permLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #d1d5db;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.toggleOn {
+  background: #02214E;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(16px);
+}
+
+/* Card actions */
+.cardActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #F0F4F8;
+}
+
+.btnDiscard {
+  height: 38px;
+  padding: 0 20px;
+  background: #F0F4F8;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnDiscard:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.btnDiscard:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnSave {
+  height: 38px;
+  padding: 0 20px;
+  background: #02214E;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSave:hover:not(:disabled) {
+  background: #011534;
+}
+
+.btnSave:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .page { padding: 24px 20px; }
+  .groupsGrid { grid-template-columns: 1fr; }
+}

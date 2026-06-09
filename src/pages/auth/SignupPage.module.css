@@ -1,0 +1,265 @@
+.page {
+  min-height: 100vh;
+  background: #F7F9FB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.aviaWatermark {
+  position: fixed;
+  bottom: -30px;
+  left: -20px;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 220px;
+  color: #02214E;
+  opacity: 0.05;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -6px;
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 448px;
+  max-width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Card: 448px, padding 48 40 40 40, radius 4px */
+.card {
+  width: 448px;
+  max-width: 100%;
+  padding: 48px 40px 40px;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0px 12px 32px 0px rgba(3, 39, 70, 0.078);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Manrope ExtraBold 800, 30px, #02214E */
+.header h1 {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 36px;
+  letter-spacing: -0.75px;
+  text-align: center;
+  color: #02214E;
+}
+
+/* Manrope Medium 500, 16px, #637083 */
+.header p {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.4px;
+  text-align: center;
+  color: #637083;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Label — Manrope SemiBold 600, 12px */
+.field label {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+  color: #5B6574;
+}
+
+.field input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  color: #111827;
+  background: #F0F4F8;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field input::placeholder {
+  color: #9ca3af;
+}
+
+.field input:focus {
+  border-color: #02214E;
+  box-shadow: 0 0 0 3px rgba(2, 33, 78, 0.10);
+}
+
+/* Password row */
+.passwordWrapper {
+  position: relative;
+}
+
+.passwordWrapper input {
+  padding-right: 44px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #637083;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.eyeBtn:hover {
+  color: #02214E;
+}
+
+/* Security requirements */
+.requirements {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #F0F4F8;
+  border-radius: 6px;
+}
+
+.requirementsTitle {
+  margin: 0 0 8px 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #637083;
+}
+
+.requirementsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.req {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px;
+  color: #637083;
+}
+
+.reqDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid #9ca3af;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.reqMet .reqDot {
+  background: #02214E;
+  border-color: #02214E;
+}
+
+.reqMet {
+  color: #02214E;
+}
+
+/* Error */
+.error {
+  font-size: 13px;
+  color: #ef4444;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+/* Submit button — Cobalt Deep */
+.submit {
+  margin-top: 8px;
+  width: 100%;
+  height: 44px;
+  background: #02214E;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.1px;
+}
+
+.submit:hover:not(:disabled) {
+  background: #011534;
+}
+
+.submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Footer link */
+.loginLink {
+  text-align: center;
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  color: #637083;
+  margin: 0;
+}
+
+.loginLink a {
+  color: #02214E;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.loginLink a:hover {
+  text-decoration: underline;
+}
