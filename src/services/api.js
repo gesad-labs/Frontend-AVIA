@@ -29,9 +29,15 @@ export function parseJwt(token) {
 async function request(path, options = {}) {
   const token = getToken()
 
+  // Never attach a stale Authorization header on public /auth/* routes
+  // (login, cadastro, recuperacao-senha, redefinicao-senha) — a leftover
+  // token from a prior session would otherwise make Spring Security's
+  // filter chain reject these unauthenticated requests with a spurious 401.
+  const isPublicAuthRoute = path.startsWith('/auth/')
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token && !isPublicAuthRoute && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   }
 
