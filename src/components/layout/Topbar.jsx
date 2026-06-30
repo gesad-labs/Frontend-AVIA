@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import styles from './Topbar.module.css';
 
@@ -19,8 +19,11 @@ function UserAvatar({ user }) {
 export default function Topbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
+
+  const isOverviewActive = location.pathname === '/projects' || location.pathname.startsWith('/project/');
 
   return (
     <header className={styles.topbar}>
@@ -29,16 +32,10 @@ export default function Topbar() {
         <span className={styles.logo}>AVIA</span>
         <nav className={styles.tabs}>
           <NavLink
-            to="/dashboard"
-            className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
+            to="/projects"
+            className={`${styles.tab} ${isOverviewActive ? styles.tabActive : ''}`}
           >
             Visão Geral
-          </NavLink>
-          <NavLink
-            to="/projects"
-            className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}
-          >
-            Projetos
           </NavLink>
         </nav>
       </div>

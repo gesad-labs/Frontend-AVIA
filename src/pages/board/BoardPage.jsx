@@ -1,5 +1,629 @@
-import { useParams } from 'react-router-dom'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { projetoService } from '../../services/projetoService'
+import styles from './BoardPage.module.css'
+
+const COLUMNS = [
+  { key: 'A_FAZER',   label: 'A Fazer'   },
+  { key: 'FAZENDO',   label: 'Fazendo'   },
+  { key: 'TESTE',     label: 'Em Teste'  },
+  { key: 'CONCLUIDA', label: 'Concluída' },
+]
+
+const PRIORIDADE_ORDER = { ALTA: 0, MEDIA: 1, BAIXA: 2 }
+
+const PRIORIDADE_CFG = {
+  ALTA:  { label: 'Alta',  cls: 'prioridadeAlta'  },
+  MEDIA: { label: 'Média', cls: 'prioridadeMedia' },
+  BAIXA: { label: 'Baixa', cls: 'prioridadeBaixa' },
+}
+
+const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
+function avatarColor(str = '') {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+function initials(name = '') {
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?'
+}
+
+function AvatarBubble({ nome, size = 30 }) {
+  const bg  = avatarColor(nome)
+  const ini = initials(nome)
+  return (
+    <div
+      className={styles.avatarBubble}
+      style={{ background: bg, width: size, height: size, fontSize: size * 0.38 }}
+      title={nome}
+    >
+      {ini}
+    </div>
+  )
+}
+
+function IconBolt() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  )
+}
+
+function IconDots() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="5" cy="12" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="19" cy="12" r="2" />
+    </svg>
+  )
+}
+
+function IconCheck() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+function PrioridadeBadge({ value }) {
+  if (!value) return null
+  const cfg = PRIORIDADE_CFG[value.toUpperCase()] ?? { label: value, cls: 'prioridadeMedia' }
+  return <span className={`${styles.badge} ${styles[cfg.cls]}`}>{cfg.label}</span>
+}
+
+/* ── Edit Card Modal ── */
+function EditCardModal({ tarefa, projectId, onClose, onSaved }) {
+  const [titulo, setTitulo]         = useState(tarefa.titulo)
+  const [descricao, setDescricao]   = useState(tarefa.descricao ?? '')
+  const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
+  const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? 'MEDIA')
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!titulo.trim()) { setError('Título obrigatório'); return }
+    setSaving(true); setError('')
+    try {
+      await projetoService.editarTarefa(projectId, tarefa.id, {
+        titulo:     titulo.trim(),
+        descricao:  descricao.trim() || titulo.trim(),
+        estimativa: estimativa !== '' ? Number(estimativa) : null,
+        prioridade,
+      })
+      onSaved()
+    } catch {
+      setError('Erro ao salvar.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>Editar Card</h2>
+          <button className={styles.modalClose} onClick={onClose} type="button">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className={styles.modalForm}>
+          {error && <p className={styles.formError}>{error}</p>}
+          <label className={styles.formLabel}>
+            Título
+            <input className={styles.formInput} value={titulo} onChange={e => setTitulo(e.target.value)} required autoFocus />
+          </label>
+          <label className={styles.formLabel}>
+            Descrição
+            <textarea
+              className={`${styles.formInput} ${styles.formTextarea}`}
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
+              rows={3}
+            />
+          </label>
+          <div className={styles.formRow}>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Estimativa (pts)
+              <input
+                className={styles.formInput}
+                type="number"
+                min="0"
+                value={estimativa}
+                onChange={e => setEstimativa(e.target.value)}
+                placeholder="—"
+              />
+            </label>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Prioridade
+              <select className={styles.formInput} value={prioridade} onChange={e => setPrioridade(e.target.value)}>
+                <option value="ALTA">Alta</option>
+                <option value="MEDIA">Média</option>
+                <option value="BAIXA">Baixa</option>
+              </select>
+            </label>
+          </div>
+          <div className={styles.modalActions}>
+            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/* ── Add Card Modal ── */
+function AddCardModal({ sprint, projectId, defaultStatus, onClose, onSaved }) {
+  const [titulo, setTitulo]         = useState('')
+  const [estimativa, setEstimativa] = useState('')
+  const [prioridade, setPrioridade] = useState('MEDIA')
+  const [status, setStatus]         = useState(defaultStatus)
+  const [saving, setSaving]         = useState(false)
+  const [error, setError]           = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!titulo.trim()) { setError('Título obrigatório'); return }
+    setSaving(true); setError('')
+    try {
+      await projetoService.criarTarefa(projectId, {
+        titulo:     titulo.trim(),
+        descricao:  titulo.trim(),
+        status,
+        prioridade,
+        estimativa: estimativa !== '' ? Number(estimativa) : null,
+        sprintId:   sprint.id,
+      })
+      onSaved()
+    } catch {
+      setError('Erro ao criar card.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>Novo Card</h2>
+          <button className={styles.modalClose} onClick={onClose} type="button">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className={styles.modalForm}>
+          {error && <p className={styles.formError}>{error}</p>}
+          <label className={styles.formLabel}>
+            Título
+            <input className={styles.formInput} value={titulo} onChange={e => setTitulo(e.target.value)} required autoFocus />
+          </label>
+          <div className={styles.formRow}>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Coluna
+              <select className={styles.formInput} value={status} onChange={e => setStatus(e.target.value)}>
+                {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </label>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Prioridade
+              <select className={styles.formInput} value={prioridade} onChange={e => setPrioridade(e.target.value)}>
+                <option value="ALTA">Alta</option>
+                <option value="MEDIA">Média</option>
+                <option value="BAIXA">Baixa</option>
+              </select>
+            </label>
+          </div>
+          <label className={styles.formLabel}>
+            Estimativa (pts)
+            <input
+              className={styles.formInput}
+              type="number"
+              min="0"
+              value={estimativa}
+              onChange={e => setEstimativa(e.target.value)}
+              placeholder="—"
+            />
+          </label>
+          <div className={styles.modalActions}>
+            <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>
+              {saving ? 'Criando...' : 'Criar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/* ── Card context menu ── */
+function CardMenu({ tarefa, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function close(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  function act(fn) { setOpen(false); fn() }
+
+  return (
+    <div className={styles.cardMenuWrap} ref={ref}>
+      <button
+        className={styles.cardMenuBtn}
+        onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
+        title="Opções"
+        type="button"
+      >
+        <IconDots />
+      </button>
+      {open && (
+        <div className={styles.cardMenu}>
+          <button onClick={() => act(onEdit)}>Editar</button>
+          <button className={styles.cardMenuDanger} onClick={() => act(onDelete)}>Excluir</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Task card — draggable ── */
+function TaskCard({ tarefa, projectId, onEdit, onDelete, compact }) {
+  const [dragging, setDragging] = useState(false)
+
+  function handleDragStart(e) {
+    setDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      tarefaId:     tarefa.id,
+      sourceStatus: tarefa.status,
+    }))
+  }
+
+  if (compact) {
+    return (
+      <div
+        className={`${styles.cardCompact} ${dragging ? styles.cardDragging : ''}`}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={() => setDragging(false)}
+      >
+        <span className={styles.cardCompactCheck}><IconCheck /></span>
+        <span className={styles.cardCompactTitle}>{tarefa.titulo}</span>
+        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`${styles.card} ${tarefa.impedimento ? styles.cardImpedimento : ''} ${dragging ? styles.cardDragging : ''}`}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={() => setDragging(false)}
+    >
+      {tarefa.impedimento && (
+        <span className={styles.impedimentoBadge} title="Impedimento">!</span>
+      )}
+      <div className={styles.cardTopRow}>
+        <PrioridadeBadge value={tarefa.prioridade} />
+        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+      </div>
+      <p className={styles.cardTitle}>{tarefa.titulo}</p>
+      {tarefa.descricao && tarefa.descricao !== tarefa.titulo && (
+        <p className={styles.cardDesc}>{tarefa.descricao}</p>
+      )}
+      <div className={styles.cardFooter}>
+        {tarefa.estimativa > 0 && (
+          <span className={styles.cardPts}>{tarefa.estimativa} SP</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── Board column — drop target ── */
+function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete }) {
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [dropping, setDropping]     = useState(false)
+  const counter = useRef(0)
+  const isCompact = column.key === 'CONCLUIDA'
+
+  function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }
+  function onDragEnter(e) { e.preventDefault(); counter.current++; setIsDragOver(true) }
+  function onDragLeave() { counter.current--; if (counter.current === 0) setIsDragOver(false) }
+
+  async function onDrop(e) {
+    e.preventDefault()
+    counter.current = 0; setIsDragOver(false)
+    let data
+    try { data = JSON.parse(e.dataTransfer.getData('text/plain')) } catch { return }
+    const { tarefaId, sourceStatus } = data
+    if (sourceStatus === column.key) return
+    setDropping(true)
+    try {
+      await projetoService.atualizarStatus(projectId, tarefaId, { status: column.key })
+      onRefresh()
+    } finally {
+      setDropping(false)
+    }
+  }
+
+  const colCls = [
+    styles.column,
+    isCompact ? styles.columnCompact : '',
+    isDragOver ? styles.columnDragOver : '',
+    dropping   ? styles.columnDropping : '',
+  ].filter(Boolean).join(' ')
+
+  return (
+    <div
+      className={colCls}
+      onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      <div className={styles.columnHeader}>
+        <span className={styles.columnTitle}>{column.label}</span>
+        <div className={styles.columnHeaderRight}>
+          <span className={styles.columnCount}>{tarefas.length}</span>
+          <button
+            className={styles.columnAddBtn}
+            onClick={() => onAddCard(column.key)}
+            title={`Adicionar card em ${column.label}`}
+            type="button"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.columnBody}>
+        {tarefas.map(t => (
+          <TaskCard
+            key={t.id}
+            tarefa={t}
+            projectId={projectId}
+            compact={isCompact}
+            onEdit={() => onEdit(t)}
+            onDelete={() => onDelete(t)}
+          />
+        ))}
+        {isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
+        {tarefas.length === 0 && !isDragOver && (
+          <div className={styles.emptyColumn}>Nenhum card</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── Main page ── */
 export default function BoardPage() {
   const { projectId } = useParams()
-  return <div style={{ padding: 32 }}>Board — projeto {projectId} — em construção</div>
+  const navigate      = useNavigate()
+
+  const [sprint, setSprint]     = useState(null)
+  const [tarefas, setTarefas]   = useState([])
+  const [projeto, setProjeto]   = useState(null)
+  const [membros, setMembros]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
+  const [noSprint, setNoSprint] = useState(false)
+
+  const [editingCard, setEditingCard]           = useState(null)
+  const [addingCardStatus, setAddingCardStatus] = useState(null)
+  const [closingSprint, setClosingSprint]       = useState(false)
+
+  const [sortBy, setSortBy]   = useState('none')
+  const [sortDir, setSortDir] = useState('asc')
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true); setError(''); setNoSprint(false)
+    try {
+      const [sprints, proj, mems] = await Promise.all([
+        projetoService.listarSprints(projectId),
+        projetoService.buscar(projectId),
+        projetoService.listarMembros(projectId),
+      ])
+      setProjeto(proj)
+      setMembros(Array.isArray(mems) ? mems : [])
+
+      const active = Array.isArray(sprints)
+        ? sprints.find(s => s.status === 'EM_ANDAMENTO')
+        : null
+
+      if (!active) { setNoSprint(true); setLoading(false); return }
+
+      setSprint(active)
+      const t = await projetoService.listarTarefas(projectId, active.id)
+      setTarefas(Array.isArray(t) ? t : [])
+    } catch {
+      setError('Erro ao carregar o board.')
+    } finally {
+      setLoading(false)
+    }
+  }, [projectId])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
+
+  async function handleEncerrarSprint() {
+    if (!sprint) return
+    if (!window.confirm(`Encerrar "${sprint.nome}"? Tarefas não concluídas voltarão ao backlog.`)) return
+    setClosingSprint(true)
+    try {
+      await projetoService.editarSprint(projectId, sprint.id, { status: 'CONCLUIDA' })
+      navigate(`/project/${projectId}/backlog`)
+    } catch {
+      alert('Erro ao encerrar sprint.')
+      setClosingSprint(false)
+    }
+  }
+
+  async function handleDelete(tarefa) {
+    if (!window.confirm(`Excluir "${tarefa.titulo}"?`)) return
+    try {
+      await projetoService.removerTarefa(projectId, tarefa.id)
+      setTarefas(prev => prev.filter(t => t.id !== tarefa.id))
+    } catch {
+      alert('Erro ao excluir.')
+    }
+  }
+
+  function applySort(list) {
+    if (sortBy === 'none') return list
+    const sorted = [...list]
+    if (sortBy === 'prioridade') {
+      sorted.sort((a, b) => {
+        const d = (PRIORIDADE_ORDER[a.prioridade] ?? 1) - (PRIORIDADE_ORDER[b.prioridade] ?? 1)
+        return sortDir === 'asc' ? d : -d
+      })
+    } else if (sortBy === 'estimativa') {
+      sorted.sort((a, b) => {
+        const d = (a.estimativa ?? 0) - (b.estimativa ?? 0)
+        return sortDir === 'asc' ? d : -d
+      })
+    }
+    return sorted
+  }
+
+  if (loading) return (
+    <div className={styles.page}>
+      <p className={styles.stateText}>Carregando board...</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className={styles.page}>
+      <p className={styles.stateError}>{error}</p>
+    </div>
+  )
+
+  if (noSprint) return (
+    <div className={styles.page}>
+      <div className={styles.noSprintBox}>
+        <p className={styles.noSprintTitle}>Nenhuma sprint em andamento</p>
+        <p className={styles.noSprintDesc}>Inicie uma sprint no backlog para visualizar o board.</p>
+        <Link to={`/project/${projectId}/backlog`} className={styles.noSprintLink}>
+          Ir para o Backlog →
+        </Link>
+      </div>
+    </div>
+  )
+
+  const tasksByStatus = Object.fromEntries(
+    COLUMNS.map(col => [col.key, applySort(tarefas.filter(t => t.status === col.key))])
+  )
+  const totalConcluidas = tasksByStatus['CONCLUIDA']?.length ?? 0
+  const progPct = tarefas.length > 0 ? Math.round((totalConcluidas / tarefas.length) * 100) : 0
+
+  const visibleMembros = membros.slice(0, 4)
+  const extraMembros   = membros.length > 4 ? membros.length - 4 : 0
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.pageHeader}>
+        <div className={styles.pageHeaderLeft}>
+          <h1 className={styles.pageTitle}>Quadro {projeto?.nome}</h1>
+          <div className={styles.pageSubtitle}>
+            <span className={styles.sprintChip}>
+              <IconBolt />
+              {sprint.nome} · Em andamento
+            </span>
+            <span className={styles.progText}>
+              · {tarefas.length} card{tarefas.length !== 1 ? 's' : ''} · {progPct}% concluído
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.pageActions}>
+          {visibleMembros.length > 0 && (
+            <div className={styles.memberAvatars}>
+              {visibleMembros.map(m => (
+                <AvatarBubble key={m.id} nome={m.nome || m.email} />
+              ))}
+              {extraMembros > 0 && (
+                <div className={styles.avatarMore}>+{extraMembros}</div>
+              )}
+            </div>
+          )}
+
+          <div className={styles.sortWrap}>
+            <select
+              className={styles.sortSelect}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+            >
+              <option value="none">Ordenar por</option>
+              <option value="prioridade">Prioridade</option>
+              <option value="estimativa">Estimativa</option>
+            </select>
+            {sortBy !== 'none' && (
+              <button
+                className={styles.sortDirBtn}
+                onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                title={sortDir === 'asc' ? 'Crescente' : 'Decrescente'}
+                type="button"
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
+            )}
+          </div>
+
+          <button className={styles.btnRefresh} onClick={fetchAll} title="Recarregar" type="button">
+            ↻
+          </button>
+
+          <button
+            className={styles.btnEncerrar}
+            onClick={handleEncerrarSprint}
+            disabled={closingSprint}
+            type="button"
+          >
+            {closingSprint ? 'Encerrando...' : 'Encerrar Sprint'}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.board}>
+        {COLUMNS.map(col => (
+          <BoardColumn
+            key={col.key}
+            column={col}
+            tarefas={tasksByStatus[col.key] ?? []}
+            projectId={projectId}
+            onRefresh={fetchAll}
+            onAddCard={status => setAddingCardStatus(status)}
+            onEdit={t => setEditingCard(t)}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+
+      {editingCard && (
+        <EditCardModal
+          tarefa={editingCard}
+          projectId={projectId}
+          onClose={() => setEditingCard(null)}
+          onSaved={() => { setEditingCard(null); fetchAll() }}
+        />
+      )}
+
+      {addingCardStatus && (
+        <AddCardModal
+          sprint={sprint}
+          projectId={projectId}
+          defaultStatus={addingCardStatus}
+          onClose={() => setAddingCardStatus(null)}
+          onSaved={() => { setAddingCardStatus(null); fetchAll() }}
+        />
+      )}
+    </div>
+  )
 }
