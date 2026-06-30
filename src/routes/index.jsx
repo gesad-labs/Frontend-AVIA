@@ -17,7 +17,7 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
 // Pages — App
-import DashboardPage from '../pages/dashboard/DashboardPage';
+import ProjectsPage from '../pages/projects/ProjectsPage';
 import ProjectPage from '../pages/project/ProjectPage';
 import BoardPage from '../pages/board/BoardPage';
 import BacklogPage from '../pages/backlog/BacklogPage';
@@ -53,7 +53,8 @@ const router = createBrowserRouter([
   {
     element: <PrivateRoute><AppLayout /></PrivateRoute>,
     children: [
-      { path: '/dashboard',                   element: <DashboardPage /> },
+      { path: '/dashboard',                   element: <Navigate to="/projects" replace /> },
+      { path: '/projects',                    element: <ProjectsPage /> },
       { path: '/project/:projectId',          element: <ProjectPage /> },
       { path: '/project/:projectId/board',    element: <BoardPage /> },
       { path: '/project/:projectId/backlog',  element: <BacklogPage /> },
