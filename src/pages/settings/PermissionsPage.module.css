@@ -260,6 +260,65 @@
   cursor: not-allowed;
 }
 
+/* Toggle read-only */
+.toggleReadOnly {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* You tag */
+.youTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 9999px;
+  vertical-align: middle;
+}
+
+/* Role selector */
+.roleSelectorWrap {
+  margin-bottom: 20px;
+}
+
+.roleSelectorLabel {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  color: #637083;
+}
+
+.roleSelector {
+  display: flex;
+  gap: 8px;
+}
+
+.roleBtn {
+  padding: 6px 18px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #637083;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.roleBtn:hover:not(:disabled) {
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.roleBtnActive {
+  font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .page { padding: 24px 20px; }
