@@ -53,6 +53,28 @@ const GripIcon = () => (
   </svg>
 )
 
+/* ── Assignee avatar ── */
+const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
+function avatarColor(str = '') {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+function initials(name = '') {
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?'
+}
+function AssigneeAvatar({ nome }) {
+  return (
+    <span
+      className={styles.assigneeAvatar}
+      style={{ background: avatarColor(nome) }}
+      title={nome}
+    >
+      {initials(nome)}
+    </span>
+  )
+}
+
 /* ── Priority badge ── */
 const PRIORIDADE_MAP = {
   ALTA:  { label: 'Alta',  cls: 'prioridadeAlta'  },
@@ -180,13 +202,14 @@ function MoveTaskModal({ tarefa, sprints, projectId, onClose, onMoved }) {
 }
 
 /* ── Edit task modal ── */
-function EditTaskModal({ tarefa, projectId, onClose, onSaved }) {
-  const [titulo, setTitulo]         = useState(tarefa.titulo)
-  const [descricao, setDescricao]   = useState(tarefa.descricao ?? '')
-  const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
-  const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? '')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
+function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
+  const [titulo, setTitulo]               = useState(tarefa.titulo)
+  const [descricao, setDescricao]         = useState(tarefa.descricao ?? '')
+  const [estimativa, setEstimativa]       = useState(tarefa.estimativa ?? '')
+  const [prioridade, setPrioridade]       = useState(tarefa.prioridade ?? '')
+  const [responsavelId, setResponsavelId] = useState(tarefa.responsavelId ? String(tarefa.responsavelId) : '')
+  const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -194,10 +217,11 @@ function EditTaskModal({ tarefa, projectId, onClose, onSaved }) {
     setLoading(true); setError('')
     try {
       await projetoService.editarTarefa(projectId, tarefa.id, {
-        titulo:     titulo.trim(),
-        descricao:  descricao.trim() || null,
-        estimativa: parseInt(estimativa, 10) || null,
-        prioridade: prioridade || null,
+        titulo:        titulo.trim(),
+        descricao:     descricao.trim() || null,
+        estimativa:    parseInt(estimativa, 10) || null,
+        prioridade:    prioridade || null,
+        responsavelId: responsavelId ? Number(responsavelId) : -1,
       })
       onSaved(); onClose()
     } catch {
@@ -234,6 +258,17 @@ function EditTaskModal({ tarefa, projectId, onClose, onSaved }) {
               </select>
             </div>
           </div>
+          {membros.length > 0 && (
+            <>
+              <label className={styles.formLabel}>Responsável</label>
+              <select className={styles.formSelect} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
+                <option value="">Sem responsável</option>
+                {membros.map(m => (
+                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                ))}
+              </select>
+            </>
+          )}
           {error && <p className={styles.formError}>{error}</p>}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
@@ -246,12 +281,13 @@ function EditTaskModal({ tarefa, projectId, onClose, onSaved }) {
 }
 
 /* ── Add task form (inline) ── */
-function AddTaskForm({ sprintId, projectId, onAdded }) {
-  const [titulo, setTitulo]         = useState('')
-  const [estimativa, setEstimativa] = useState('')
-  const [prioridade, setPrioridade] = useState('')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
+function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
+  const [titulo, setTitulo]               = useState('')
+  const [estimativa, setEstimativa]       = useState('')
+  const [prioridade, setPrioridade]       = useState('')
+  const [responsavelId, setResponsavelId] = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -259,14 +295,15 @@ function AddTaskForm({ sprintId, projectId, onAdded }) {
     setLoading(true); setError('')
     try {
       await projetoService.criarTarefa(projectId, {
-        titulo:    titulo.trim(),
-        descricao: titulo.trim(),
-        status:    'A_FAZER',
-        estimativa: parseInt(estimativa, 10) || null,
-        prioridade: prioridade || null,
-        sprintId:   sprintId ?? null,
+        titulo:        titulo.trim(),
+        descricao:     titulo.trim(),
+        status:        'A_FAZER',
+        estimativa:    parseInt(estimativa, 10) || null,
+        prioridade:    prioridade || null,
+        sprintId:      sprintId ?? null,
+        responsavelId: responsavelId ? Number(responsavelId) : null,
       })
-      setTitulo(''); setEstimativa(''); setPrioridade('')
+      setTitulo(''); setEstimativa(''); setPrioridade(''); setResponsavelId('')
       onAdded()
     } catch {
       setError('Erro ao criar card.')
@@ -286,6 +323,14 @@ function AddTaskForm({ sprintId, projectId, onAdded }) {
           <option value="MEDIA">Média</option>
           <option value="BAIXA">Baixa</option>
         </select>
+        {membros.length > 0 && (
+          <select className={styles.addSelect} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
+            <option value="">Responsável</option>
+            {membros.map(m => (
+              <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+            ))}
+          </select>
+        )}
         <button type="submit" className={styles.addBtn} disabled={loading}>
           <PlusIcon />{loading ? '...' : 'Adicionar'}
         </button>
@@ -296,7 +341,7 @@ function AddTaskForm({ sprintId, projectId, onAdded }) {
 }
 
 /* ── Task row — draggable ── */
-function TaskRow({ tarefa, projectId, allSprints, onRefresh }) {
+function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
   const [editOpen, setEditOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -343,6 +388,7 @@ function TaskRow({ tarefa, projectId, allSprints, onRefresh }) {
           </div>
         </div>
         <div className={styles.taskRight}>
+          {tarefa.responsavelNome && <AssigneeAvatar nome={tarefa.responsavelNome} />}
           {tarefa.estimativa > 0 && <span className={styles.taskPoints}>{tarefa.estimativa} pts</span>}
           <button className={styles.iconBtn} title="Editar" onClick={() => setEditOpen(true)}><EditIcon /></button>
           <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>
@@ -350,7 +396,7 @@ function TaskRow({ tarefa, projectId, allSprints, onRefresh }) {
         </div>
       </div>
 
-      {editOpen && <EditTaskModal tarefa={tarefa} projectId={projectId} onClose={() => setEditOpen(false)} onSaved={onRefresh} />}
+      {editOpen && <EditTaskModal tarefa={tarefa} projectId={projectId} membros={membros} onClose={() => setEditOpen(false)} onSaved={onRefresh} />}
       {moveOpen && <MoveTaskModal tarefa={tarefa} sprints={allSprints} projectId={projectId} onClose={() => setMoveOpen(false)} onMoved={onRefresh} />}
     </>
   )
@@ -399,7 +445,7 @@ const SPRINT_STATUS_CLS = {
   CONCLUIDA:       'sprintStatusConcluida',
 }
 
-function SprintSection({ sprint, tarefas, projectId, allSprints, onRefresh }) {
+function SprintSection({ sprint, tarefas, projectId, allSprints, membros, onRefresh }) {
   const [collapsed, setCollapsed]       = useState(false)
   const [updatingStatus, setUpdatingSt] = useState(false)
 
@@ -464,7 +510,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, onRefresh }) {
 
       {!collapsed && (
         <div className={styles.sprintCardBody}>
-          <AddTaskForm sprintId={sprint.id} projectId={projectId} onAdded={onRefresh} />
+          <AddTaskForm sprintId={sprint.id} projectId={projectId} membros={membros} onAdded={onRefresh} />
           {tarefas.length === 0 ? (
             dropZone.isDragOver
               ? <div className={styles.dropHint}>Soltar aqui para adicionar à sprint</div>
@@ -472,7 +518,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, onRefresh }) {
           ) : (
             <div className={styles.taskList}>
               {tarefas.map(t => (
-                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} onRefresh={onRefresh} />
+                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} onRefresh={onRefresh} />
               ))}
               {dropZone.isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
             </div>
@@ -493,6 +539,7 @@ export default function BacklogPage() {
   const [backlogTarefas, setBacklogTarefas] = useState([])
   const [sprints, setSprints]               = useState([])
   const [sprintTarefas, setSprintTarefas]   = useState({})
+  const [membros, setMembros]               = useState([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState('')
   const [showCreateSprint, setShowCreateSprint] = useState(false)
@@ -501,10 +548,12 @@ export default function BacklogPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const [backlogData, sprintsData] = await Promise.all([
+      const [backlogData, sprintsData, membrosData] = await Promise.all([
         projetoService.getBacklog(projectId),
         projetoService.listarSprints(projectId),
+        projetoService.listarMembros(projectId),
       ])
+      setMembros(Array.isArray(membrosData) ? membrosData : [])
       setBacklogTarefas(Array.isArray(backlogData) ? backlogData : [])
 
       const allSprints = Array.isArray(sprintsData) ? sprintsData : []
@@ -573,6 +622,7 @@ export default function BacklogPage() {
                 tarefas={sprintTarefas[s.id] ?? []}
                 projectId={projectId}
                 allSprints={sprints}
+                membros={membros}
                 onRefresh={fetchAll}
               />
             ))}
@@ -603,7 +653,7 @@ export default function BacklogPage() {
 
           {!backlogCollapsed && (
             <div className={styles.sprintCardBody}>
-              <AddTaskForm sprintId={null} projectId={projectId} onAdded={fetchAll} />
+              <AddTaskForm sprintId={null} projectId={projectId} membros={membros} onAdded={fetchAll} />
               {backlogTarefas.length === 0 ? (
                 backlogDrop.isDragOver
                   ? <div className={styles.dropHint}>Soltar aqui para devolver ao backlog</div>
@@ -611,7 +661,7 @@ export default function BacklogPage() {
               ) : (
                 <div className={styles.taskList}>
                   {backlogTarefas.map(t => (
-                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} onRefresh={fetchAll} />
+                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} membros={membros} onRefresh={fetchAll} />
                   ))}
                   {backlogDrop.isDragOver && <div className={styles.dropHint}>Soltar aqui para devolver ao backlog</div>}
                 </div>

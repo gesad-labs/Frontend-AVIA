@@ -69,6 +69,126 @@ function IconCheck() {
   )
 }
 
+function IconFilter() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  )
+}
+
+function IconSearch() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+}
+
+/* ── Filter Panel ── */
+function FilterPanel({
+  membros,
+  filterText, onFilterText,
+  filterResponsaveis, onToggleResponsavel,
+  filterPrioridades, onTogglePrioridade,
+  filterImpedimento, onToggleImpedimento,
+  onClear, onClose,
+}) {
+  return (
+    <>
+      <div className={styles.filterBackdrop} onClick={onClose} />
+      <div className={styles.filterPanel}>
+        <div className={styles.filterHeader}>
+          <div className={styles.filterHeaderLeft}>
+            <IconFilter />
+            <span className={styles.filterTitle}>Filtros do Quadro</span>
+          </div>
+          <button className={styles.filterClose} onClick={onClose} type="button">×</button>
+        </div>
+
+        <div className={styles.filterContent}>
+          <div className={styles.filterSection}>
+            <p className={styles.filterSectionLabel}>BUSCAR CARD</p>
+            <div className={styles.filterSearchWrap}>
+              <IconSearch />
+              <input
+                className={styles.filterSearchInput}
+                placeholder="Nome do card ou ID..."
+                value={filterText}
+                onChange={e => onFilterText(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {membros.length > 0 && (
+            <div className={styles.filterSection}>
+              <p className={styles.filterSectionLabel}>RESPONSÁVEL</p>
+              <div className={styles.filterCheckList}>
+                {membros.map(m => (
+                  <label key={m.id} className={styles.filterCheckItem}>
+                    <input
+                      type="checkbox"
+                      checked={filterResponsaveis.has(m.id)}
+                      onChange={() => onToggleResponsavel(m.id)}
+                      className={styles.filterCheckbox}
+                    />
+                    <AvatarBubble nome={m.nome || m.email} size={28} />
+                    <span className={styles.filterCheckLabel}>{m.nome || m.email}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={styles.filterSection}>
+            <p className={styles.filterSectionLabel}>PRIORIDADE</p>
+            <div className={styles.filterChips}>
+              {[
+                { key: 'ALTA',  label: 'Alta',  dot: 'chipDotAlta'  },
+                { key: 'MEDIA', label: 'Média', dot: 'chipDotMedia' },
+                { key: 'BAIXA', label: 'Baixa', dot: 'chipDotBaixa' },
+              ].map(({ key, label, dot }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`${styles.filterChip} ${filterPrioridades.has(key) ? styles.filterChipActive : ''}`}
+                  onClick={() => onTogglePrioridade(key)}
+                >
+                  <span className={`${styles.chipDot} ${styles[dot]}`} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.filterSection}>
+            <p className={styles.filterSectionLabel}>STATUS CRÍTICO</p>
+            <div className={styles.filterToggleRow}>
+              <span className={styles.filterToggleIcon}>🚫</span>
+              <span className={styles.filterToggleLabel}>Mostrar Impedimentos</span>
+              <button
+                type="button"
+                className={`${styles.filterToggle} ${filterImpedimento ? styles.filterToggleOn : ''}`}
+                onClick={() => onToggleImpedimento(!filterImpedimento)}
+                role="switch"
+                aria-checked={filterImpedimento}
+              >
+                <span className={`${styles.filterToggleThumb} ${filterImpedimento ? styles.filterToggleThumbActive : ''}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.filterFooter}>
+          <button type="button" className={styles.btnFilterClear} onClick={onClear}>Limpar Filtros</button>
+          <button type="button" className={styles.btnFilterApply} onClick={onClose}>Aplicar Filtros</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function PrioridadeBadge({ value }) {
   if (!value) return null
   const cfg = PRIORIDADE_CFG[value.toUpperCase()] ?? { label: value, cls: 'prioridadeMedia' }
@@ -76,13 +196,14 @@ function PrioridadeBadge({ value }) {
 }
 
 /* ── Edit Card Modal ── */
-function EditCardModal({ tarefa, projectId, onClose, onSaved }) {
-  const [titulo, setTitulo]         = useState(tarefa.titulo)
-  const [descricao, setDescricao]   = useState(tarefa.descricao ?? '')
-  const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
-  const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? 'MEDIA')
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState('')
+function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
+  const [titulo, setTitulo]               = useState(tarefa.titulo)
+  const [descricao, setDescricao]         = useState(tarefa.descricao ?? '')
+  const [estimativa, setEstimativa]       = useState(tarefa.estimativa ?? '')
+  const [prioridade, setPrioridade]       = useState(tarefa.prioridade ?? 'MEDIA')
+  const [responsavelId, setResponsavelId] = useState(tarefa.responsavelId ? String(tarefa.responsavelId) : '')
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -90,10 +211,11 @@ function EditCardModal({ tarefa, projectId, onClose, onSaved }) {
     setSaving(true); setError('')
     try {
       await projetoService.editarTarefa(projectId, tarefa.id, {
-        titulo:     titulo.trim(),
-        descricao:  descricao.trim() || titulo.trim(),
-        estimativa: estimativa !== '' ? Number(estimativa) : null,
+        titulo:        titulo.trim(),
+        descricao:     descricao.trim() || titulo.trim(),
+        estimativa:    estimativa !== '' ? Number(estimativa) : null,
         prioridade,
+        responsavelId: responsavelId ? Number(responsavelId) : -1,
       })
       onSaved()
     } catch {
@@ -145,6 +267,17 @@ function EditCardModal({ tarefa, projectId, onClose, onSaved }) {
               </select>
             </label>
           </div>
+          {membros.length > 0 && (
+            <label className={styles.formLabel}>
+              Responsável
+              <select className={styles.formInput} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
+                <option value="">Sem responsável</option>
+                {membros.map(m => (
+                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
             <button type="submit" className={styles.btnSave} disabled={saving}>
@@ -158,13 +291,14 @@ function EditCardModal({ tarefa, projectId, onClose, onSaved }) {
 }
 
 /* ── Add Card Modal ── */
-function AddCardModal({ sprint, projectId, defaultStatus, onClose, onSaved }) {
-  const [titulo, setTitulo]         = useState('')
-  const [estimativa, setEstimativa] = useState('')
-  const [prioridade, setPrioridade] = useState('MEDIA')
-  const [status, setStatus]         = useState(defaultStatus)
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState('')
+function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSaved }) {
+  const [titulo, setTitulo]               = useState('')
+  const [estimativa, setEstimativa]       = useState('')
+  const [prioridade, setPrioridade]       = useState('MEDIA')
+  const [status, setStatus]               = useState(defaultStatus)
+  const [responsavelId, setResponsavelId] = useState('')
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -172,12 +306,13 @@ function AddCardModal({ sprint, projectId, defaultStatus, onClose, onSaved }) {
     setSaving(true); setError('')
     try {
       await projetoService.criarTarefa(projectId, {
-        titulo:     titulo.trim(),
-        descricao:  titulo.trim(),
+        titulo:        titulo.trim(),
+        descricao:     titulo.trim(),
         status,
         prioridade,
-        estimativa: estimativa !== '' ? Number(estimativa) : null,
-        sprintId:   sprint.id,
+        estimativa:    estimativa !== '' ? Number(estimativa) : null,
+        sprintId:      sprint.id,
+        responsavelId: responsavelId ? Number(responsavelId) : null,
       })
       onSaved()
     } catch {
@@ -226,6 +361,17 @@ function AddCardModal({ sprint, projectId, defaultStatus, onClose, onSaved }) {
               placeholder="—"
             />
           </label>
+          {membros.length > 0 && (
+            <label className={styles.formLabel}>
+              Responsável
+              <select className={styles.formInput} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
+                <option value="">Sem responsável</option>
+                {membros.map(m => (
+                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
             <button type="submit" className={styles.btnSave} disabled={saving}>
@@ -321,6 +467,9 @@ function TaskCard({ tarefa, projectId, onEdit, onDelete, compact }) {
       <div className={styles.cardFooter}>
         {tarefa.estimativa > 0 && (
           <span className={styles.cardPts}>{tarefa.estimativa} SP</span>
+        )}
+        {tarefa.responsavelNome && (
+          <AvatarBubble nome={tarefa.responsavelNome} size={22} />
         )}
       </div>
     </div>
@@ -424,6 +573,33 @@ export default function BoardPage() {
   const [sortBy, setSortBy]   = useState('none')
   const [sortDir, setSortDir] = useState('asc')
 
+  const [showFilters, setShowFilters]             = useState(false)
+  const [filterText, setFilterText]               = useState('')
+  const [filterResponsaveis, setFilterResponsaveis] = useState(new Set())
+  const [filterPrioridades, setFilterPrioridades]   = useState(new Set())
+  const [filterImpedimento, setFilterImpedimento]   = useState(false)
+
+  function toggleSet(setter, val) {
+    setter(prev => {
+      const next = new Set(prev)
+      if (next.has(val)) next.delete(val); else next.add(val)
+      return next
+    })
+  }
+
+  function clearFilters() {
+    setFilterText('')
+    setFilterResponsaveis(new Set())
+    setFilterPrioridades(new Set())
+    setFilterImpedimento(false)
+  }
+
+  const activeFilterCount =
+    (filterText.trim() ? 1 : 0) +
+    filterResponsaveis.size +
+    filterPrioridades.size +
+    (filterImpedimento ? 1 : 0)
+
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(''); setNoSprint(false)
     try {
@@ -493,6 +669,17 @@ export default function BoardPage() {
     return sorted
   }
 
+  function applyFilters(list) {
+    const txt = filterText.trim().toLowerCase()
+    return list.filter(t => {
+      if (txt && !t.titulo.toLowerCase().includes(txt)) return false
+      if (filterResponsaveis.size > 0 && !filterResponsaveis.has(t.responsavelId)) return false
+      if (filterPrioridades.size > 0 && !filterPrioridades.has(t.prioridade)) return false
+      if (filterImpedimento && !t.impedimento) return false
+      return true
+    })
+  }
+
   if (loading) return (
     <div className={styles.page}>
       <p className={styles.stateText}>Carregando board...</p>
@@ -518,7 +705,7 @@ export default function BoardPage() {
   )
 
   const tasksByStatus = Object.fromEntries(
-    COLUMNS.map(col => [col.key, applySort(tarefas.filter(t => t.status === col.key))])
+    COLUMNS.map(col => [col.key, applySort(applyFilters(tarefas.filter(t => t.status === col.key)))])
   )
   const totalConcluidas = tasksByStatus['CONCLUIDA']?.length ?? 0
   const progPct = tarefas.length > 0 ? Math.round((totalConcluidas / tarefas.length) * 100) : 0
@@ -553,6 +740,16 @@ export default function BoardPage() {
               )}
             </div>
           )}
+
+          <button
+            className={`${styles.btnFilter} ${activeFilterCount > 0 ? styles.btnFilterActive : ''}`}
+            onClick={() => setShowFilters(true)}
+            type="button"
+          >
+            <IconFilter />
+            Filtros
+            {activeFilterCount > 0 && <span className={styles.filterBadge}>{activeFilterCount}</span>}
+          </button>
 
           <div className={styles.sortWrap}>
             <select
@@ -610,6 +807,7 @@ export default function BoardPage() {
         <EditCardModal
           tarefa={editingCard}
           projectId={projectId}
+          membros={membros}
           onClose={() => setEditingCard(null)}
           onSaved={() => { setEditingCard(null); fetchAll() }}
         />
@@ -620,8 +818,25 @@ export default function BoardPage() {
           sprint={sprint}
           projectId={projectId}
           defaultStatus={addingCardStatus}
+          membros={membros}
           onClose={() => setAddingCardStatus(null)}
           onSaved={() => { setAddingCardStatus(null); fetchAll() }}
+        />
+      )}
+
+      {showFilters && (
+        <FilterPanel
+          membros={membros}
+          filterText={filterText}
+          onFilterText={setFilterText}
+          filterResponsaveis={filterResponsaveis}
+          onToggleResponsavel={id => toggleSet(setFilterResponsaveis, id)}
+          filterPrioridades={filterPrioridades}
+          onTogglePrioridade={p => toggleSet(setFilterPrioridades, p)}
+          filterImpedimento={filterImpedimento}
+          onToggleImpedimento={setFilterImpedimento}
+          onClear={clearFilters}
+          onClose={() => setShowFilters(false)}
         />
       )}
     </div>

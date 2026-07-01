@@ -657,3 +657,280 @@
 }
 .btnSave:hover:not(:disabled) { background: var(--color-primary-hover, #4f46e5); }
 .btnSave:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Filter button (header) ── */
+.btnFilter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  height: 34px;
+  background: var(--color-surface, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #0f172a);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btnFilter:hover { background: var(--color-surface-hover, #f1f5f9); }
+.btnFilterActive {
+  border-color: var(--color-primary, #6366f1);
+  color: var(--color-primary, #6366f1);
+}
+.filterBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--color-primary, #6366f1);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Filter panel ── */
+.filterBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.25);
+  z-index: 200;
+}
+
+.filterPanel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 384px;
+  background: #ffffff;
+  border-left: 1px solid #E2E8F0;
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  height: 77px;
+  border-bottom: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+.filterHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-primary, #0f172a);
+}
+.filterTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+.filterClose {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.filterClose:hover { background: var(--color-surface-hover, #f1f5f9); }
+
+.filterContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.filterSectionLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-secondary, #64748b);
+  letter-spacing: 0.07em;
+  margin: 0;
+}
+
+/* Search */
+.filterSearchWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+.filterSearchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--color-text-primary, #0f172a);
+}
+.filterSearchInput::placeholder { color: #94a3b8; }
+
+/* Responsável */
+.filterCheckList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.filterCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.filterCheckbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary, #6366f1);
+  flex-shrink: 0;
+}
+.filterCheckLabel {
+  font-size: 0.875rem;
+  color: var(--color-text-primary, #0f172a);
+  font-weight: 500;
+}
+
+/* Prioridade chips */
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filterChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 20px;
+  background: var(--color-surface, #f8fafc);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #0f172a);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.filterChipActive {
+  background: var(--color-text-primary, #0f172a);
+  border-color: var(--color-text-primary, #0f172a);
+  color: #fff;
+}
+.chipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chipDotAlta  { background: #ef4444; }
+.chipDotMedia { background: #f59e0b; }
+.chipDotBaixa { background: #22c55e; }
+
+/* Toggle */
+.filterToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-surface, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+}
+.filterToggleIcon { font-size: 1.1rem; }
+.filterToggleLabel {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #0f172a);
+}
+.filterToggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #e2e8f0;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.filterToggleOn { background: #1e293b; }
+.filterToggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+.filterToggleThumbActive { left: 22px; }
+
+/* Footer */
+.filterFooter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  height: 89px;
+  border-top: 1px solid #F1F5F9;
+  flex-shrink: 0;
+}
+.btnFilterClear {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnFilterClear:hover { background: var(--color-surface-hover, #f1f5f9); }
+.btnFilterApply {
+  flex: 1;
+  padding: 10px;
+  background: var(--color-text-primary, #0f172a);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btnFilterApply:hover { opacity: 0.85; }
