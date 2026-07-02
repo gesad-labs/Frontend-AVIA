@@ -27,4 +27,12 @@ export const projetoService = {
   atualizarStatus:   (id, tid, data)=> api.patch(`/projetos/${id}/tarefas/${tid}/status`, data),
   moverTarefa:       (id, tid, data)=> api.patch(`/projetos/${id}/tarefas/${tid}/sprint`, data),
   removerTarefa:     (id, tid)      => api.delete(`/projetos/${id}/tarefas/${tid}`),
+  buscarTarefa:      (id, tid)      => api.get(`/projetos/${id}/tarefas/${tid}`),
+
+  // Usuário atual
+  buscarUsuarioAtual: () => api.get('/usuario/eu'),
+
+  // Planning Poker
+  criarSessaoPoker:       (id, tid) => api.post(`/projetos/${id}/tarefas/${tid}/planning-poker/sessoes`),
+  buscarSessaoAtivaPoker: (id, tid) => api.get(`/projetos/${id}/tarefas/${tid}/planning-poker/sessao-ativa`),
 }
