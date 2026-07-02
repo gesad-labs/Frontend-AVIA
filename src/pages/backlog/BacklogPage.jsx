@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import styles from './BacklogPage.module.css'
 
@@ -50,6 +50,13 @@ const GripIcon = () => (
     <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
     <circle cx="9"  cy="19" r="1" fill="currentColor" stroke="none" />
     <circle cx="15" cy="19" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+const PokerIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="14" height="18" rx="2" />
+    <path d="M8 9h2" /><path d="M8 13h4" /><path d="M8 17h2" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2" />
   </svg>
 )
 
@@ -342,6 +349,7 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
 
 /* ── Task row — draggable ── */
 function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
+  const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -390,6 +398,7 @@ function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
         <div className={styles.taskRight}>
           {tarefa.responsavelNome && <AssigneeAvatar nome={tarefa.responsavelNome} />}
           {tarefa.estimativa > 0 && <span className={styles.taskPoints}>{tarefa.estimativa} pts</span>}
+          <button className={styles.iconBtn} title="Estimativa Colaborativa" onClick={() => navigate(`/project/${projectId}/planning-poker/${tarefa.id}`)}><PokerIcon /></button>
           <button className={styles.iconBtn} title="Editar" onClick={() => setEditOpen(true)}><EditIcon /></button>
           <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>
           <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>
