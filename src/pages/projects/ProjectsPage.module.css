@@ -183,6 +183,11 @@
   transition: box-shadow var(--transition-base), transform var(--transition-base);
   display: flex;
   flex-direction: column;
+  z-index: 1;
+}
+
+.cardMenuActive {
+  z-index: 100;
 }
 
 .card:hover {
@@ -344,8 +349,16 @@
   gap: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   background: var(--color-white);
+}
+
+.listRow:first-child {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.listRow:last-child {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .listRow {
@@ -437,6 +450,10 @@
 .listRowActions {
   position: relative;
   flex-shrink: 0;
+}
+
+.listRowMenuActive {
+  z-index: 100;
 }
 
 /* ── States ── */
@@ -770,6 +787,22 @@
 .contextItemSub {
   justify-content: space-between;
   position: relative;
+  user-select: none;
+}
+
+.contextItemSubOpen {
+  background: var(--color-surface);
+}
+
+.contextChevron {
+  display: flex;
+  align-items: center;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.contextChevronOpen {
+  transform: rotate(90deg);
 }
 
 .contextItemLeft {
@@ -780,13 +813,14 @@
 
 .contextSubmenu {
   position: absolute;
-  left: calc(100% + 4px);
-  top: 0;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  min-width: 180px;
+  min-width: 100%;
   padding: 4px 0;
   z-index: calc(var(--z-dropdown) + 1);
 }

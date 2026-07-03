@@ -32,7 +32,22 @@ export const projetoService = {
   // Usuário atual
   buscarUsuarioAtual: () => api.get('/usuario/eu'),
 
+  // Anexos de tarefa
+  listarAnexos:   (id, tid)       => api.get(`/projetos/${id}/tarefas/${tid}/anexos`),
+  adicionarAnexo: (id, tid, data) => api.post(`/projetos/${id}/tarefas/${tid}/anexos`, data),
+  removerAnexo:   (id, tid, aid)  => api.delete(`/projetos/${id}/tarefas/${tid}/anexos/${aid}`),
+
+  // Comentários de tarefa
+  listarComentarios:   (id, tid)       => api.get(`/projetos/${id}/tarefas/${tid}/comentarios`),
+  adicionarComentario: (id, tid, data) => api.post(`/projetos/${id}/tarefas/${tid}/comentarios`, data),
+
+  // Permissões por membro
+  buscarPermissoesMembro:    (id, uid)       => api.get(`/projetos/${id}/membros/${uid}/permissoes`),
+  editarPermissoesMembro:    (id, uid, data) => api.patch(`/projetos/${id}/membros/${uid}/permissoes`, data),
+  restaurarPermissoesMembro: (id, uid)       => api.put(`/projetos/${id}/membros/${uid}/permissoes`),
+
   // Planning Poker
-  criarSessaoPoker:       (id, tid) => api.post(`/projetos/${id}/tarefas/${tid}/planning-poker/sessoes`),
-  buscarSessaoAtivaPoker: (id, tid) => api.get(`/projetos/${id}/tarefas/${tid}/planning-poker/sessao-ativa`),
+  criarSessaoPoker:              (id, tid) => api.post(`/projetos/${id}/tarefas/${tid}/planning-poker/sessoes`),
+  buscarSessaoAtivaPoker:        (id, tid) => api.get(`/projetos/${id}/tarefas/${tid}/planning-poker/sessao-ativa`),
+  listarTarefasComSessaoAtiva:   (id)      => api.get(`/projetos/${id}/planning-poker/tarefas-com-sessao-ativa`),
 }
