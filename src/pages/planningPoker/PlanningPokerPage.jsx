@@ -38,11 +38,20 @@ function Avatar({ nome, size = 34 }) {
   )
 }
 
+/* ─── Icons ─── */
+function IconCheckCircle() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  )
+}
+
 /* ─── Participant row ─── */
 function ParticipantRow({ p, isMe, cargo, mostrarValores }) {
   return (
     <div className={`${styles.participantRow} ${isMe ? styles.participantMe : ''}`}>
-      <Avatar nome={p.nome} size={34} />
+      <Avatar nome={p.nome} size={36} />
       <div className={styles.participantInfo}>
         <div className={styles.participantNameRow}>
           <span className={styles.participantName}>{p.nome}</span>
@@ -57,7 +66,7 @@ function ParticipantRow({ p, isMe, cargo, mostrarValores }) {
             : <span className={styles.voteAbsent}>—</span>
         ) : (
           p.votou
-            ? <span className={styles.votedCheck}>✓</span>
+            ? <span className={`${styles.voteCheck} ${isMe ? styles.voteCheckMe : ''}`}><IconCheckCircle /></span>
             : <span className={styles.waitingDots}>···</span>
         )}
       </div>
@@ -173,6 +182,7 @@ export default function PlanningPokerPage() {
   function handleVotar() {
     if (selectedCard === null || !sessao) return
     sendWS(`/app/planning-poker/${sessao.id}/votar`, { valor: selectedCard })
+    setSelectedCard(null)
   }
 
   function handleRevelar() {
@@ -276,107 +286,109 @@ export default function PlanningPokerPage() {
     <div className={styles.page}>
       {/* ── Main content ── */}
       <div className={styles.main}>
-        <div className={styles.sessaoChip}>
-          <span className={styles.chipPulse} />
-          SESSÃO DE ESTIMATIVA ATIVA · FIBONACCI
-          {sessao.rodadaAtual > 1 && (
-            <span className={styles.rodadaBadge}>Rodada {sessao.rodadaAtual}</span>
+        <div className={styles.container}>
+          <div className={styles.sessaoChip}>
+            <span className={styles.chipPulse} />
+            SESSÃO DE ESTIMATIVA ATIVA · FIBONACCI
+            {sessao.rodadaAtual > 1 && (
+              <span className={styles.rodadaBadge}>Rodada {sessao.rodadaAtual}</span>
+            )}
+          </div>
+
+          <h1 className={styles.tarefaTitulo}>{tarefa?.titulo}</h1>
+          {tarefa?.descricao && tarefa.descricao !== tarefa.titulo && (
+            <p className={styles.tarefaDesc}>{tarefa.descricao}</p>
           )}
-        </div>
 
-        <h1 className={styles.tarefaTitulo}>{tarefa?.titulo}</h1>
-        {tarefa?.descricao && tarefa.descricao !== tarefa.titulo && (
-          <p className={styles.tarefaDesc}>{tarefa.descricao}</p>
-        )}
+          {/* ── Fibonacci grid ── */}
+          <div className={styles.cardGrid}>
+            {FIBONACCI.map(({ label, value, sub }) => {
+              const isSelected = selectedCard === value
+              const isMyVote   = mostrarValores && myParticipant?.valor === value
+              const active     = isSelected || isMyVote
 
-        {/* ── Fibonacci grid ── */}
-        <div className={styles.cardGrid}>
-          {FIBONACCI.map(({ label, value, sub }) => {
-            const isSelected = selectedCard === value
-            const isMyVote   = mostrarValores && myParticipant?.valor === value
-            const active     = isSelected || isMyVote
-
-            return (
-              <button
-                key={label}
-                type="button"
-                className={[
-                  styles.fibCard,
-                  active ? styles.fibCardSelected : '',
-                  isVotando ? styles.fibCardClickable : styles.fibCardDisabled,
-                ].filter(Boolean).join(' ')}
-                onClick={() => isVotando && setSelectedCard(value)}
-                disabled={!isVotando}
-              >
-                <span className={styles.fibValue}>{label}</span>
-                <span className={styles.fibSub}>{sub}</span>
-                {active && <span className={styles.fibCheck}>✓</span>}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ── Bottom action bar ── */}
-        <div className={styles.actionBar}>
-          <div className={styles.barStatus}>
-            <span className={styles.barStatusDot} />
-            <span>
-              <strong>{totalVotos} de {totalPart}</strong> membros votaram
-            </span>
-          </div>
-
-          <div className={styles.barPontuacao}>
-            <span className={styles.barPontuacaoLabel}>PONTUAÇÃO FINAL</span>
-            {isRevelada && isGerente ? (
-              <input
-                className={styles.estimativaInput}
-                type="number"
-                min="0"
-                placeholder={mediaVotos != null ? String(mediaVotos) : '0'}
-                value={estimativaInput}
-                onChange={e => setEstimativaInput(e.target.value)}
-              />
-            ) : (
-              <span className={styles.barPontuacaoValor}>
-                {mediaVotos != null ? `~${mediaVotos}` : '—'}
-              </span>
-            )}
-          </div>
-
-          <div className={styles.barActions}>
-            {isVotando && (
-              <button
-                className={styles.btnPrimary}
-                onClick={handleVotar}
-                disabled={selectedCard === null}
-              >
-                {votouNaRodada ? 'Alterar Voto' : 'Votar'}
-              </button>
-            )}
-            {isVotando && isGerente && (
-              <button className={styles.btnSecondary} onClick={handleRevelar}>
-                Revelar Votos
-              </button>
-            )}
-            {isRevelada && isGerente && (
-              <>
-                <button className={styles.btnSecondary} onClick={handleNovaRodada}>
-                  Nova Rodada
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  className={[
+                    styles.fibCard,
+                    active ? styles.fibCardSelected : '',
+                    isVotando ? styles.fibCardClickable : styles.fibCardDisabled,
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => isVotando && setSelectedCard(value)}
+                  disabled={!isVotando}
+                >
+                  <span className={styles.fibValue}>{label}</span>
+                  <span className={styles.fibSub}>{sub}</span>
+                  {active && <span className={styles.fibCheck}>✓</span>}
                 </button>
+              )
+            })}
+          </div>
+
+          {/* ── Bottom action bar ── */}
+          <div className={styles.actionBar}>
+            <div className={styles.barStatus}>
+              <span className={styles.barStatusDot} />
+              <span>
+                <strong>{totalVotos} de {totalPart}</strong> membros votaram
+              </span>
+            </div>
+
+            <div className={styles.barPontuacao}>
+              <span className={styles.barPontuacaoLabel}>PONTUAÇÃO FINAL</span>
+              {isRevelada && isGerente ? (
+                <input
+                  className={styles.estimativaInput}
+                  type="number"
+                  min="0"
+                  placeholder={mediaVotos != null ? String(mediaVotos) : '0'}
+                  value={estimativaInput}
+                  onChange={e => setEstimativaInput(e.target.value)}
+                />
+              ) : (
+                <span className={styles.barPontuacaoValor}>
+                  {mediaVotos != null ? `~${mediaVotos}` : '—'}
+                </span>
+              )}
+            </div>
+
+            <div className={styles.barActions}>
+              {isVotando && (
                 <button
                   className={styles.btnPrimary}
-                  onClick={handleFinalizar}
-                  disabled={!estimativaInput.trim()}
+                  onClick={handleVotar}
+                  disabled={selectedCard === null}
                 >
-                  Finalizar
+                  {votouNaRodada ? 'Alterar Voto' : 'Votar'}
                 </button>
-              </>
-            )}
-            {isAtiva && isGerente && (
-              <button className={styles.btnDanger} onClick={handleCancelar}>
-                Cancelar
-              </button>
-            )}
+              )}
+              {isVotando && isGerente && (
+                <button className={styles.btnSecondary} onClick={handleRevelar}>
+                  Revelar Votos
+                </button>
+              )}
+              {isRevelada && isGerente && (
+                <>
+                  <button className={styles.btnSecondary} onClick={handleNovaRodada}>
+                    Nova Rodada
+                  </button>
+                  <button
+                    className={styles.btnPrimary}
+                    onClick={handleFinalizar}
+                    disabled={!estimativaInput.trim()}
+                  >
+                    Finalizar
+                  </button>
+                </>
+              )}
+              {isAtiva && isGerente && (
+                <button className={styles.btnDanger} onClick={handleCancelar}>
+                  Cancelar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -385,7 +397,7 @@ export default function PlanningPokerPage() {
       <div className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
           <span className={styles.sidebarTitle}>PARTICIPANTES DO PROJETO</span>
-          <span className={styles.sidebarCount}>{totalPart}</span>
+          <span className={styles.sidebarOnline}>{totalPart} ONLINE</span>
         </div>
 
         <div className={styles.participantList}>

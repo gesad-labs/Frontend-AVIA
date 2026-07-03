@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
+import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './BacklogPage.module.css'
 
 /* ── Icons ── */
@@ -50,6 +51,12 @@ const GripIcon = () => (
     <circle cx="15" cy="12" r="1" fill="currentColor" stroke="none" />
     <circle cx="9"  cy="19" r="1" fill="currentColor" stroke="none" />
     <circle cx="15" cy="19" r="1" fill="currentColor" stroke="none" />
+  </svg>
+)
+const BlockIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
   </svg>
 )
 const PokerIcon = () => (
@@ -210,13 +217,23 @@ function MoveTaskModal({ tarefa, sprints, projectId, onClose, onMoved }) {
 
 /* ── Edit task modal ── */
 function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
-  const [titulo, setTitulo]               = useState(tarefa.titulo)
-  const [descricao, setDescricao]         = useState(tarefa.descricao ?? '')
-  const [estimativa, setEstimativa]       = useState(tarefa.estimativa ?? '')
-  const [prioridade, setPrioridade]       = useState(tarefa.prioridade ?? '')
-  const [responsavelId, setResponsavelId] = useState(tarefa.responsavelId ? String(tarefa.responsavelId) : '')
-  const [loading, setLoading]             = useState(false)
-  const [error, setError]                 = useState('')
+  const [titulo, setTitulo]         = useState(tarefa.titulo)
+  const [descricao, setDescricao]   = useState(tarefa.descricao ?? '')
+  const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
+  const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? '')
+  const [responsaveisIds, setResponsaveisIds] = useState(
+    new Set(tarefa.responsaveis?.map(r => r.id) ?? [])
+  )
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+
+  function toggleResp(id) {
+    setResponsaveisIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -224,11 +241,11 @@ function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
     setLoading(true); setError('')
     try {
       await projetoService.editarTarefa(projectId, tarefa.id, {
-        titulo:        titulo.trim(),
-        descricao:     descricao.trim() || null,
-        estimativa:    parseInt(estimativa, 10) || null,
-        prioridade:    prioridade || null,
-        responsavelId: responsavelId ? Number(responsavelId) : -1,
+        titulo:          titulo.trim(),
+        descricao:       descricao.trim() || null,
+        estimativa:      parseInt(estimativa, 10) || null,
+        prioridade:      prioridade || null,
+        responsaveisIds: Array.from(responsaveisIds),
       })
       onSaved(); onClose()
     } catch {
@@ -267,13 +284,15 @@ function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
           </div>
           {membros.length > 0 && (
             <>
-              <label className={styles.formLabel}>Responsável</label>
-              <select className={styles.formSelect} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-                <option value="">Sem responsável</option>
+              <label className={styles.formLabel}>Responsáveis</label>
+              <div className={styles.checkList}>
                 {membros.map(m => (
-                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                  <label key={m.id} className={styles.checkItem}>
+                    <input type="checkbox" checked={responsaveisIds.has(m.id)} onChange={() => toggleResp(m.id)} />
+                    <span>{m.nome || m.email}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </>
           )}
           {error && <p className={styles.formError}>{error}</p>}
@@ -308,7 +327,7 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
         estimativa:    parseInt(estimativa, 10) || null,
         prioridade:    prioridade || null,
         sprintId:      sprintId ?? null,
-        responsavelId: responsavelId ? Number(responsavelId) : null,
+        responsaveisIds: responsavelId ? [Number(responsavelId)] : [],
       })
       setTitulo(''); setEstimativa(''); setPrioridade(''); setResponsavelId('')
       onAdded()
@@ -348,8 +367,9 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
 }
 
 /* ── Task row — draggable ── */
-function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
+function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh }) {
   const navigate = useNavigate()
+  const hasActivePoker = activePokerTasks?.has(tarefa.id)
   const [editOpen, setEditOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -388,7 +408,9 @@ function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
       <div className={rowCls} draggable onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className={styles.taskDragHandle} title="Arrastar"><GripIcon /></div>
         <div className={styles.taskLeft}>
-          {tarefa.impedimento && <span className={styles.impedimentoMark} title="Impedimento">!</span>}
+          {tarefa.impedimento && (
+            <span className={styles.impedimentoMark} title="Impedimento"><BlockIcon /> Impedimento</span>
+          )}
           <span className={styles.taskTitle}>{tarefa.titulo}</span>
           <div className={styles.taskBadges}>
             <PrioridadeBadge value={tarefa.prioridade} />
@@ -396,10 +418,17 @@ function TaskRow({ tarefa, projectId, allSprints, membros, onRefresh }) {
           </div>
         </div>
         <div className={styles.taskRight}>
-          {tarefa.responsavelNome && <AssigneeAvatar nome={tarefa.responsavelNome} />}
+          {tarefa.responsaveis?.map(r => <AssigneeAvatar key={r.id} nome={r.nome} />)}
           {tarefa.estimativa > 0 && <span className={styles.taskPoints}>{tarefa.estimativa} pts</span>}
-          <button className={styles.iconBtn} title="Estimativa Colaborativa" onClick={() => navigate(`/project/${projectId}/planning-poker/${tarefa.id}`)}><PokerIcon /></button>
-          <button className={styles.iconBtn} title="Editar" onClick={() => setEditOpen(true)}><EditIcon /></button>
+          <button
+            className={`${styles.iconBtn} ${hasActivePoker ? styles.iconBtnPokerActive : ''}`}
+            title={hasActivePoker ? 'Estimativa Colaborativa — sessão ativa' : 'Estimativa Colaborativa'}
+            onClick={() => navigate(`/project/${projectId}/planning-poker/${tarefa.id}`)}
+          >
+            <PokerIcon />
+            {hasActivePoker && <span className={styles.pokerActiveDot} />}
+          </button>
+          <button className={styles.iconBtn} title="Detalhes" onClick={() => navigate(`/project/${projectId}/task/${tarefa.id}`)}><EditIcon /></button>
           <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>
           <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>
         </div>
@@ -454,7 +483,7 @@ const SPRINT_STATUS_CLS = {
   CONCLUIDA:       'sprintStatusConcluida',
 }
 
-function SprintSection({ sprint, tarefas, projectId, allSprints, membros, onRefresh }) {
+function SprintSection({ sprint, tarefas, projectId, allSprints, membros, activePokerTasks, isGerente, canCreateTarefas, onRefresh }) {
   const [collapsed, setCollapsed]       = useState(false)
   const [updatingStatus, setUpdatingSt] = useState(false)
 
@@ -473,6 +502,8 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, onRefr
     try {
       await projetoService.editarSprint(projectId, sprint.id, { status: novoStatus })
       onRefresh()
+    } catch {
+      alert('Sem permissão para alterar o status da sprint.')
     } finally {
       setUpdatingSt(false)
     }
@@ -512,14 +543,16 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, onRefr
           </div>
         </div>
         <div className={styles.sprintCardActions}>
-          {canStart  && <button className={styles.btnStart}  disabled={updatingStatus} onClick={() => changeStatus('EM_ANDAMENTO')}>{updatingStatus ? '...' : 'Iniciar Sprint'}</button>}
-          {canFinish && <button className={styles.btnFinish} disabled={updatingStatus} onClick={() => changeStatus('CONCLUIDA')}>{updatingStatus ? '...' : 'Concluir Sprint'}</button>}
+          {isGerente && canStart  && <button className={styles.btnStart}  disabled={updatingStatus} onClick={() => changeStatus('EM_ANDAMENTO')}>{updatingStatus ? '...' : 'Iniciar Sprint'}</button>}
+          {isGerente && canFinish && <button className={styles.btnFinish} disabled={updatingStatus} onClick={() => changeStatus('CONCLUIDA')}>{updatingStatus ? '...' : 'Concluir Sprint'}</button>}
         </div>
       </div>
 
       {!collapsed && (
         <div className={styles.sprintCardBody}>
-          <AddTaskForm sprintId={sprint.id} projectId={projectId} membros={membros} onAdded={onRefresh} />
+          {canCreateTarefas && (
+            <AddTaskForm sprintId={sprint.id} projectId={projectId} membros={membros} onAdded={onRefresh} />
+          )}
           {tarefas.length === 0 ? (
             dropZone.isDragOver
               ? <div className={styles.dropHint}>Soltar aqui para adicionar à sprint</div>
@@ -527,7 +560,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, onRefr
           ) : (
             <div className={styles.taskList}>
               {tarefas.map(t => (
-                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} onRefresh={onRefresh} />
+                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} />
               ))}
               {dropZone.isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
             </div>
@@ -549,19 +582,50 @@ export default function BacklogPage() {
   const [sprints, setSprints]               = useState([])
   const [sprintTarefas, setSprintTarefas]   = useState({})
   const [membros, setMembros]               = useState([])
+  const [currentUser, setCurrentUser]       = useState(null)
+  const [activePokerTasks, setActivePokerTasks] = useState(new Set())
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState('')
   const [showCreateSprint, setShowCreateSprint] = useState(false)
   const [backlogCollapsed, setBacklogCollapsed] = useState(false)
+  const pokerStompRef = useRef(null)
+
+  /* ── WS: escuta sessões ativas em tempo real ── */
+  useEffect(() => {
+    const client = createPokerClient({
+      onConnect: () => {
+        client.subscribe(
+          `/topic/projetos/${projectId}/planning-poker`,
+          msg => {
+            const evento = JSON.parse(msg.body)
+            const tid = evento.sessao?.tarefaId
+            if (!tid) return
+            if (evento.tipo === 'SESSAO_CRIADA') {
+              setActivePokerTasks(prev => new Set([...prev, tid]))
+            } else if (evento.tipo === 'SESSAO_FINALIZADA' || evento.tipo === 'SESSAO_CANCELADA') {
+              setActivePokerTasks(prev => { const n = new Set(prev); n.delete(tid); return n })
+            }
+          }
+        )
+      },
+    })
+    client.activate()
+    pokerStompRef.current = client
+    return () => client.deactivate()
+  }, [projectId])
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const [backlogData, sprintsData, membrosData] = await Promise.all([
+      const [backlogData, sprintsData, membrosData, activePokerIds, userData] = await Promise.all([
         projetoService.getBacklog(projectId),
         projetoService.listarSprints(projectId),
         projetoService.listarMembros(projectId),
+        projetoService.listarTarefasComSessaoAtiva(projectId).catch(() => []),
+        projetoService.buscarUsuarioAtual().catch(() => null),
       ])
+      setCurrentUser(userData)
+      setActivePokerTasks(new Set(Array.isArray(activePokerIds) ? activePokerIds : []))
       setMembros(Array.isArray(membrosData) ? membrosData : [])
       setBacklogTarefas(Array.isArray(backlogData) ? backlogData : [])
 
@@ -591,6 +655,10 @@ export default function BacklogPage() {
 
   const backlogPts = backlogTarefas.reduce((a, t) => a + (t.estimativa || 0), 0)
 
+  const myMembro = membros.find(m => m.id === currentUser?.id)
+  const isGerente = myMembro?.papel === 'gerente'
+  const canCreateTarefas = myMembro?.papel !== 'visualizador'
+
   const backlogDrop = useDropZone({ targetSprintId: null, projectId, onRefresh: fetchAll })
 
   if (loading) return <div className={styles.page}><p className={styles.stateText}>Carregando backlog...</p></div>
@@ -609,18 +677,22 @@ export default function BacklogPage() {
           <h1 className={styles.pageTitle}>Backlog</h1>
           <p className={styles.pageSubtitle}>Planeje sprints e gerencie os cards do produto.</p>
         </div>
-        <button className={styles.btnPrimary} onClick={() => setShowCreateSprint(true)}>
-          <PlusIcon /> Criar Nova Sprint
-        </button>
+        {isGerente && (
+          <button className={styles.btnPrimary} onClick={() => setShowCreateSprint(true)}>
+            <PlusIcon /> Criar Nova Sprint
+          </button>
+        )}
       </div>
 
       <div className={styles.content}>
         {sprints.length === 0 ? (
           <div className={styles.emptySprints}>
             <p>Nenhuma sprint criada.</p>
-            <button className={styles.btnPrimary} onClick={() => setShowCreateSprint(true)}>
-              <PlusIcon /> Criar Sprint
-            </button>
+            {isGerente && (
+              <button className={styles.btnPrimary} onClick={() => setShowCreateSprint(true)}>
+                <PlusIcon /> Criar Sprint
+              </button>
+            )}
           </div>
         ) : (
           <div className={styles.sprintList}>
@@ -632,6 +704,9 @@ export default function BacklogPage() {
                 projectId={projectId}
                 allSprints={sprints}
                 membros={membros}
+                activePokerTasks={activePokerTasks}
+                isGerente={isGerente}
+                canCreateTarefas={canCreateTarefas}
                 onRefresh={fetchAll}
               />
             ))}
@@ -662,7 +737,9 @@ export default function BacklogPage() {
 
           {!backlogCollapsed && (
             <div className={styles.sprintCardBody}>
-              <AddTaskForm sprintId={null} projectId={projectId} membros={membros} onAdded={fetchAll} />
+              {canCreateTarefas && (
+                <AddTaskForm sprintId={null} projectId={projectId} membros={membros} onAdded={fetchAll} />
+              )}
               {backlogTarefas.length === 0 ? (
                 backlogDrop.isDragOver
                   ? <div className={styles.dropHint}>Soltar aqui para devolver ao backlog</div>
@@ -670,7 +747,7 @@ export default function BacklogPage() {
               ) : (
                 <div className={styles.taskList}>
                   {backlogTarefas.map(t => (
-                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} membros={membros} onRefresh={fetchAll} />
+                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={fetchAll} />
                   ))}
                   {backlogDrop.isDragOver && <div className={styles.dropHint}>Soltar aqui para devolver ao backlog</div>}
                 </div>

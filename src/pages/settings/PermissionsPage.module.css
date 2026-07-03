@@ -319,6 +319,51 @@
   font-weight: 700;
 }
 
+/* Reset button */
+.btnReset {
+  height: 38px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btnReset:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+.btnReset:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Gerente / loading notes inside card */
+.gerenteNote {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 13px;
+  color: #637083;
+  font-style: italic;
+}
+
+.loadingNote {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.cardErrorMsg {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .page { padding: 24px 20px; }

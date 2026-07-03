@@ -142,6 +142,20 @@ function avatarColor(seed) {
 const FILTERS = ['Todos', 'Em Andamento', 'Concluídos', 'Planejamento']
 const PAGE_SIZE = 8
 
+/* ── Project status persistence (localStorage) ── */
+const STATUS_LS_KEY = 'avia_project_statuses'
+function loadSavedStatuses() {
+  try { return JSON.parse(localStorage.getItem(STATUS_LS_KEY) || '{}') }
+  catch { return {} }
+}
+function saveStatus(id, status) {
+  try {
+    const saved = loadSavedStatuses()
+    saved[String(id)] = status
+    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
+  } catch { /* ignore quota/parse errors */ }
+}
+
 /* ── Role icons for step 2 ── */
 const GerIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -433,19 +447,20 @@ function CardMenu({ projetoId, projetoNome, onClose, onStatusChange }) {
       </button>
 
       <div
-        className={`${styles.contextItem} ${styles.contextItemSub}`}
-        onMouseEnter={() => setShowStatus(true)}
-        onMouseLeave={() => setShowStatus(false)}
+        className={`${styles.contextItem} ${styles.contextItemSub} ${showStatus ? styles.contextItemSubOpen : ''}`}
+        onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
       >
         <span className={styles.contextItemLeft}><RefreshIcon /> Alterar status</span>
-        <ChevronRightSmIcon />
+        <span className={`${styles.contextChevron} ${showStatus ? styles.contextChevronOpen : ''}`}>
+          <ChevronRightSmIcon />
+        </span>
         {showStatus && (
           <div className={styles.contextSubmenu}>
             {STATUS_OPTIONS.map(({ label, Icon }) => (
               <button
                 key={label}
                 className={styles.contextItem}
-                onClick={() => { onStatusChange(projetoId, label); onClose() }}
+                onClick={e => { e.stopPropagation(); onStatusChange(projetoId, label); onClose() }}
               >
                 <Icon /> {label}
               </button>
@@ -478,7 +493,7 @@ function ProjectListRow({ projeto, onStatusChange }) {
   const status = projeto._status || 'EM ANDAMENTO'
 
   return (
-    <div className={styles.listRow} onClick={() => navigate(`/project/${projeto.id}`)}>
+    <div className={`${styles.listRow} ${menuOpen ? styles.listRowMenuActive : ''}`} onClick={() => navigate(`/project/${projeto.id}`)}>
       <div className={styles.listRowDot} style={{ background: bg }}>
         <span className={styles.listRowIni}>{ini}</span>
       </div>
@@ -526,7 +541,7 @@ function ProjectCard({ projeto, onStatusChange }) {
   const status = projeto._status || 'EM ANDAMENTO'
 
   return (
-    <div className={styles.card} onClick={() => navigate(`/project/${projeto.id}`)}>
+    <div className={`${styles.card} ${menuOpen ? styles.cardMenuActive : ''}`} onClick={() => navigate(`/project/${projeto.id}`)}>
       <div className={styles.cardHeader} style={{ background: bg }}>
         <span className={`${styles.statusBadge} ${status === 'PLANEJAMENTO' ? styles.statusPlanning : status === 'CONCLUÍDO' ? styles.statusDone : ''}`}>
           {status}
@@ -614,7 +629,11 @@ export default function ProjectsPage() {
 
   const fetchProjetos = useCallback(async () => {
     setLoading(true); setError('')
-    try { setProjetos(await projetoService.listar()) }
+    try {
+      const data = await projetoService.listar()
+      const saved = loadSavedStatuses()
+      setProjetos(data.map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p))
+    }
     catch { setError('Erro ao carregar projetos.') }
     finally { setLoading(false) }
   }, [])
@@ -643,7 +662,9 @@ export default function ProjectsPage() {
 
   function handleStatusChange(id, label) {
     const map = { 'Em andamento': 'EM ANDAMENTO', 'Planejamento': 'PLANEJAMENTO', 'Concluído': 'CONCLUÍDO' }
-    setProjetos(prev => prev.map(p => p.id === id ? { ...p, _status: map[label] } : p))
+    const newStatus = map[label]
+    setProjetos(prev => prev.map(p => p.id === id ? { ...p, _status: newStatus } : p))
+    saveStatus(id, newStatus)
   }
 
   return (
