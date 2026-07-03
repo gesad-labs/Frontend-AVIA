@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useProject } from '../../context/ProjectContext'
-import { useParams } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import styles from './ViewPermissionsPage.module.css'
 
@@ -194,32 +194,40 @@ function PermissionSection({ group, can }) {
 ───────────────────────────────────────── */
 export default function ViewPermissionsPage() {
   const { user } = useAuth()
-  const { projects } = useProject()
+  useProject()
   const { projectId } = useParams()
-  const [membro, setMembro] = useState(null)
+  const [membro,      setMembro]      = useState(null)
+  const [projectName, setProjectName] = useState('este projeto')
   const [loading, setLoading] = useState(true)
-
-  const project = projects.find((p) => String(p.id) === String(projectId))
-  const projectName = project?.name ?? 'este projeto'
 
   useEffect(() => {
     if (!projectId || !user?.email) { setLoading(false); return }
-    projetoService.listarMembros(projectId)
-      .then((data) => {
-        const list = Array.isArray(data) ? data : []
-        setMembro(list.find((m) => m.email === user.email) ?? null)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    Promise.all([
+      projetoService.listarMembros(projectId),
+      projetoService.buscar(projectId).catch(() => null),
+    ]).then(([membrosData, proj]) => {
+      const list = Array.isArray(membrosData) ? membrosData : []
+      setMembro(list.find((m) => m.email === user.email) ?? null)
+      if (proj?.nome) setProjectName(proj.nome)
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [projectId, user?.email])
 
-  const role        = membro?.cargo === 'Gerente' ? 'GERENTE' : 'MEMBRO'
+  const role        = membro?.cargo === 'Gerente'
+    ? 'GERENTE'
+    : membro?.cargo === 'Visualizador'
+      ? 'VISUALIZADOR'
+      : 'MEMBRO'
   const perms       = PERMISSIONS[role] || PERMISSIONS.MEMBRO
   const can         = (p) => perms.has(p)
   const displayRole = ROLE_LABEL[role] ?? role
   const roleColor   = ROLE_COLOR[role] ?? '#475569'
   const noteText    = ROLE_NOTE[role] ?? ROLE_NOTE.MEMBRO
-  const userId      = membro ? `#APS-${String(membro.id).padStart(4, '0')}` : '—'
+  const userId      = membro ? String(membro.id).padStart(4, '0') : '—'
+
+  /* Gerentes acessam a tela de edição */
+  if (!loading && membro?.cargo === 'Gerente') {
+    return <Navigate to={`/project/${projectId}/permissions`} replace />
+  }
 
   if (loading) {
     return (

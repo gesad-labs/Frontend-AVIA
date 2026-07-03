@@ -26,6 +26,7 @@ import PermissionsPage from '../pages/settings/PermissionsPage';
 import ViewPermissionsPage from '../pages/settings/ViewPermissionsPage';
 import MembersPage from '../pages/settings/MembersPage'
 import PlanningPokerPage from '../pages/planningPoker/PlanningPokerPage';
+import TaskDetailPage from '../pages/task/TaskDetailPage';
 
 // Guards
 import PrivateRoute from './PrivateRoute';
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
       { path: '/project/:projectId/permissions/view', element: <ViewPermissionsPage /> },
       { path: '/project/:projectId/members',      element: <MembersPage /> },
       { path: '/project/:projectId/planning-poker/:taskId', element: <PlanningPokerPage /> },
+      { path: '/project/:projectId/task/:taskId',          element: <TaskDetailPage /> },
     ],
   },
 

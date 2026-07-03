@@ -12,12 +12,39 @@ const COLUMNS = [
 
 const PRIORIDADE_ORDER = { ALTA: 0, MEDIA: 1, BAIXA: 2 }
 
-const PRIORIDADE_CFG = {
-  ALTA:  { label: 'Alta',  cls: 'prioridadeAlta'  },
-  MEDIA: { label: 'Média', cls: 'prioridadeMedia' },
-  BAIXA: { label: 'Baixa', cls: 'prioridadeBaixa' },
+const TIPO_COLORS = {
+  'ARQUITETURA':   { bg: '#e0e7ff', color: '#3730a3' },
+  'DESIGN SYSTEM': { bg: '#ccfbf1', color: '#0f766e' },
+  'DESIGN':        { bg: '#ccfbf1', color: '#0f766e' },
+  'BACKEND':       { bg: '#d1fae5', color: '#065f46' },
+  'FRONTEND':      { bg: '#dbeafe', color: '#1d4ed8' },
+  'MELHORIA':      { bg: '#ffedd5', color: '#9a3412' },
+  'BUG':           { bg: '#fef2f2', color: '#991b1b' },
+  'FEATURE':       { bg: '#ede9fe', color: '#5b21b6' },
+  'DOC':           { bg: '#fef9c3', color: '#713f12' },
+  'DOCUMENTAÇÃO':  { bg: '#fef9c3', color: '#713f12' },
+  'CORE':          { bg: '#f1f5f9', color: '#334155' },
+  'TESTE':         { bg: '#f0fdf4', color: '#166534' },
+  'INFRA':         { bg: '#f0f9ff', color: '#0369a1' },
+  'PESQUISA':      { bg: '#faf5ff', color: '#6b21a8' },
+  'ALTA':          { bg: '#fef2f2', color: '#991b1b' },
+  'MÉDIA':         { bg: '#fffbeb', color: '#92400e' },
+  'BAIXA':         { bg: '#f0fdf4', color: '#166534' },
 }
 
+const PRIORIDADE_LABEL = { ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
+const PRIORIDADE_STYLE = {
+  ALTA:  { bg: '#fef2f2', color: '#991b1b' },
+  MEDIA: { bg: '#fffbeb', color: '#92400e' },
+  BAIXA: { bg: '#f0fdf4', color: '#166534' },
+}
+
+const TIPO_OPTIONS = [
+  'FEATURE', 'BUG', 'MELHORIA', 'ARQUITETURA', 'BACKEND', 'FRONTEND',
+  'DESIGN', 'DOC', 'CORE', 'INFRA', 'PESQUISA', 'TESTE',
+]
+
+/* ── Helpers ── */
 const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
 function avatarColor(str = '') {
   let h = 0
@@ -28,28 +55,26 @@ function initials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?'
 }
 
-function AvatarBubble({ nome, size = 30 }) {
-  const bg  = avatarColor(nome)
-  const ini = initials(nome)
+function AvatarBubble({ nome, size = 26 }) {
   return (
     <div
       className={styles.avatarBubble}
-      style={{ background: bg, width: size, height: size, fontSize: size * 0.38 }}
+      style={{ background: avatarColor(nome), width: size, height: size, fontSize: size * 0.38 }}
       title={nome}
     >
-      {ini}
+      {initials(nome)}
     </div>
   )
 }
 
+/* ── Icons ── */
 function IconBolt() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
     </svg>
   )
 }
-
 function IconDots() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -59,16 +84,21 @@ function IconDots() {
     </svg>
   )
 }
-
 function IconCheck() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }
-
+function IconBlock() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+    </svg>
+  )
+}
 function IconFilter() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,13 +106,49 @@ function IconFilter() {
     </svg>
   )
 }
-
 function IconSearch() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   )
+}
+function IconAttach() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+    </svg>
+  )
+}
+function IconCheckSquare() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+    </svg>
+  )
+}
+
+/* ── Type tag ── */
+function CardTypeTag({ tipo, prioridade }) {
+  if (tipo) {
+    const key = tipo.toUpperCase()
+    const cfg = TIPO_COLORS[key] ?? { bg: '#e2e8f0', color: '#475569' }
+    return (
+      <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
+        {tipo.toUpperCase()}
+      </span>
+    )
+  }
+  if (prioridade) {
+    const key = prioridade.toUpperCase()
+    const cfg = PRIORIDADE_STYLE[key] ?? PRIORIDADE_STYLE.MEDIA
+    return (
+      <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
+        {PRIORIDADE_LABEL[key] ?? prioridade}
+      </span>
+    )
+  }
+  return null
 }
 
 /* ── Filter Panel ── */
@@ -105,7 +171,6 @@ function FilterPanel({
           </div>
           <button className={styles.filterClose} onClick={onClose} type="button">×</button>
         </div>
-
         <div className={styles.filterContent}>
           <div className={styles.filterSection}>
             <p className={styles.filterSectionLabel}>BUSCAR CARD</p>
@@ -120,7 +185,6 @@ function FilterPanel({
               />
             </div>
           </div>
-
           {membros.length > 0 && (
             <div className={styles.filterSection}>
               <p className={styles.filterSectionLabel}>RESPONSÁVEL</p>
@@ -140,7 +204,6 @@ function FilterPanel({
               </div>
             </div>
           )}
-
           <div className={styles.filterSection}>
             <p className={styles.filterSectionLabel}>PRIORIDADE</p>
             <div className={styles.filterChips}>
@@ -161,7 +224,6 @@ function FilterPanel({
               ))}
             </div>
           </div>
-
           <div className={styles.filterSection}>
             <p className={styles.filterSectionLabel}>STATUS CRÍTICO</p>
             <div className={styles.filterToggleRow}>
@@ -179,7 +241,6 @@ function FilterPanel({
             </div>
           </div>
         </div>
-
         <div className={styles.filterFooter}>
           <button type="button" className={styles.btnFilterClear} onClick={onClear}>Limpar Filtros</button>
           <button type="button" className={styles.btnFilterApply} onClick={onClose}>Aplicar Filtros</button>
@@ -189,21 +250,26 @@ function FilterPanel({
   )
 }
 
-function PrioridadeBadge({ value }) {
-  if (!value) return null
-  const cfg = PRIORIDADE_CFG[value.toUpperCase()] ?? { label: value, cls: 'prioridadeMedia' }
-  return <span className={`${styles.badge} ${styles[cfg.cls]}`}>{cfg.label}</span>
-}
-
 /* ── Edit Card Modal ── */
 function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
-  const [titulo, setTitulo]               = useState(tarefa.titulo)
-  const [descricao, setDescricao]         = useState(tarefa.descricao ?? '')
-  const [estimativa, setEstimativa]       = useState(tarefa.estimativa ?? '')
-  const [prioridade, setPrioridade]       = useState(tarefa.prioridade ?? 'MEDIA')
-  const [responsavelId, setResponsavelId] = useState(tarefa.responsavelId ? String(tarefa.responsavelId) : '')
-  const [saving, setSaving]               = useState(false)
-  const [error, setError]                 = useState('')
+  const [titulo, setTitulo]         = useState(tarefa.titulo)
+  const [descricao, setDescricao]   = useState(tarefa.descricao ?? '')
+  const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
+  const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? 'MEDIA')
+  const [tipo, setTipo]             = useState(tarefa.tipo ?? '')
+  const [responsaveisIds, setResponsaveisIds] = useState(
+    new Set(tarefa.responsaveis?.map(r => r.id) ?? [])
+  )
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
+
+  function toggleResp(id) {
+    setResponsaveisIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -211,11 +277,12 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
     setSaving(true); setError('')
     try {
       await projetoService.editarTarefa(projectId, tarefa.id, {
-        titulo:        titulo.trim(),
-        descricao:     descricao.trim() || titulo.trim(),
-        estimativa:    estimativa !== '' ? Number(estimativa) : null,
+        titulo:          titulo.trim(),
+        descricao:       descricao.trim() || titulo.trim(),
+        estimativa:      estimativa !== '' ? Number(estimativa) : null,
         prioridade,
-        responsavelId: responsavelId ? Number(responsavelId) : -1,
+        responsaveisIds: Array.from(responsaveisIds),
+        tipo:            tipo.trim() || null,
       })
       onSaved()
     } catch {
@@ -239,24 +306,15 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
           </label>
           <label className={styles.formLabel}>
             Descrição
-            <textarea
-              className={`${styles.formInput} ${styles.formTextarea}`}
-              value={descricao}
-              onChange={e => setDescricao(e.target.value)}
-              rows={3}
-            />
+            <textarea className={`${styles.formInput} ${styles.formTextarea}`} value={descricao} onChange={e => setDescricao(e.target.value)} rows={3} />
           </label>
           <div className={styles.formRow}>
             <label className={styles.formLabel} style={{ flex: 1 }}>
-              Estimativa (pts)
-              <input
-                className={styles.formInput}
-                type="number"
-                min="0"
-                value={estimativa}
-                onChange={e => setEstimativa(e.target.value)}
-                placeholder="—"
-              />
+              Tipo / Etiqueta
+              <select className={styles.formInput} value={tipo} onChange={e => setTipo(e.target.value)}>
+                <option value="">Sem etiqueta</option>
+                {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </label>
             <label className={styles.formLabel} style={{ flex: 1 }}>
               Prioridade
@@ -267,22 +325,26 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
               </select>
             </label>
           </div>
+          <label className={styles.formLabel}>
+            Estimativa (pts)
+            <input className={styles.formInput} type="number" min="0" value={estimativa} onChange={e => setEstimativa(e.target.value)} placeholder="—" />
+          </label>
           {membros.length > 0 && (
             <label className={styles.formLabel}>
-              Responsável
-              <select className={styles.formInput} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-                <option value="">Sem responsável</option>
+              Responsáveis
+              <div className={styles.checkList}>
                 {membros.map(m => (
-                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                  <label key={m.id} className={styles.checkItem}>
+                    <input type="checkbox" checked={responsaveisIds.has(m.id)} onChange={() => toggleResp(m.id)} />
+                    <span>{m.nome || m.email}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </label>
           )}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
-            <button type="submit" className={styles.btnSave} disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
           </div>
         </form>
       </div>
@@ -292,13 +354,14 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
 
 /* ── Add Card Modal ── */
 function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSaved }) {
-  const [titulo, setTitulo]               = useState('')
-  const [estimativa, setEstimativa]       = useState('')
-  const [prioridade, setPrioridade]       = useState('MEDIA')
-  const [status, setStatus]               = useState(defaultStatus)
+  const [titulo, setTitulo]         = useState('')
+  const [estimativa, setEstimativa] = useState('')
+  const [prioridade, setPrioridade] = useState('MEDIA')
+  const [status, setStatus]         = useState(defaultStatus)
+  const [tipo, setTipo]             = useState('')
   const [responsavelId, setResponsavelId] = useState('')
-  const [saving, setSaving]               = useState(false)
-  const [error, setError]                 = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -312,7 +375,8 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
         prioridade,
         estimativa:    estimativa !== '' ? Number(estimativa) : null,
         sprintId:      sprint.id,
-        responsavelId: responsavelId ? Number(responsavelId) : null,
+        responsaveisIds: responsavelId ? [Number(responsavelId)] : [],
+        tipo:          tipo || null,
       })
       onSaved()
     } catch {
@@ -336,11 +400,20 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
           </label>
           <div className={styles.formRow}>
             <label className={styles.formLabel} style={{ flex: 1 }}>
+              Tipo / Etiqueta
+              <select className={styles.formInput} value={tipo} onChange={e => setTipo(e.target.value)}>
+                <option value="">Sem etiqueta</option>
+                {TIPO_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
               Coluna
               <select className={styles.formInput} value={status} onChange={e => setStatus(e.target.value)}>
                 {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
             </label>
+          </div>
+          <div className={styles.formRow}>
             <label className={styles.formLabel} style={{ flex: 1 }}>
               Prioridade
               <select className={styles.formInput} value={prioridade} onChange={e => setPrioridade(e.target.value)}>
@@ -349,34 +422,23 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
                 <option value="BAIXA">Baixa</option>
               </select>
             </label>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Estimativa (pts)
+              <input className={styles.formInput} type="number" min="0" value={estimativa} onChange={e => setEstimativa(e.target.value)} placeholder="—" />
+            </label>
           </div>
-          <label className={styles.formLabel}>
-            Estimativa (pts)
-            <input
-              className={styles.formInput}
-              type="number"
-              min="0"
-              value={estimativa}
-              onChange={e => setEstimativa(e.target.value)}
-              placeholder="—"
-            />
-          </label>
           {membros.length > 0 && (
             <label className={styles.formLabel}>
               Responsável
               <select className={styles.formInput} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
                 <option value="">Sem responsável</option>
-                {membros.map(m => (
-                  <option key={m.id} value={m.id}>{m.nome || m.email}</option>
-                ))}
+                {membros.map(m => <option key={m.id} value={m.id}>{m.nome || m.email}</option>)}
               </select>
             </label>
           )}
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
-            <button type="submit" className={styles.btnSave} disabled={saving}>
-              {saving ? 'Criando...' : 'Criar'}
-            </button>
+            <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? 'Criando...' : 'Criar'}</button>
           </div>
         </form>
       </div>
@@ -418,8 +480,8 @@ function CardMenu({ tarefa, onEdit, onDelete }) {
   )
 }
 
-/* ── Task card — draggable ── */
-function TaskCard({ tarefa, projectId, onEdit, onDelete, compact }) {
+/* ── Task card ── */
+function TaskCard({ tarefa, onEdit, onDelete, compact, altBg }) {
   const [dragging, setDragging] = useState(false)
 
   function handleDragStart(e) {
@@ -434,50 +496,104 @@ function TaskCard({ tarefa, projectId, onEdit, onDelete, compact }) {
   if (compact) {
     return (
       <div
-        className={`${styles.cardCompact} ${dragging ? styles.cardDragging : ''}`}
+        className={[
+          styles.cardCompact,
+          altBg ? styles.cardCompactAlt : '',
+          dragging ? styles.cardDragging : '',
+        ].filter(Boolean).join(' ')}
         draggable
         onDragStart={handleDragStart}
         onDragEnd={() => setDragging(false)}
       >
         <span className={styles.cardCompactCheck}><IconCheck /></span>
-        <span className={styles.cardCompactTitle}>{tarefa.titulo}</span>
-        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+        <div className={styles.cardCompactBody}>
+          {tarefa.tipo && (
+            <span className={styles.cardCompactType}>{tarefa.tipo.toUpperCase()}</span>
+          )}
+          <span className={styles.cardCompactTitle}>{tarefa.titulo}</span>
+        </div>
+        <div className={styles.cardCompactRight}>
+          <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+        </div>
       </div>
     )
   }
 
+  const hasAnexos    = (tarefa.anexosCount ?? 0) > 0
+  const hasSubtarefas = (tarefa.subtarefasCount ?? 0) > 0
+
   return (
     <div
-      className={`${styles.card} ${tarefa.impedimento ? styles.cardImpedimento : ''} ${dragging ? styles.cardDragging : ''}`}
+      className={[
+        styles.card,
+        tarefa.impedimento ? styles.cardImpedimento : '',
+        dragging ? styles.cardDragging : '',
+      ].filter(Boolean).join(' ')}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={() => setDragging(false)}
     >
-      {tarefa.impedimento && (
-        <span className={styles.impedimentoBadge} title="Impedimento">!</span>
-      )}
+      {/* Top row: ID + menu */}
       <div className={styles.cardTopRow}>
-        <PrioridadeBadge value={tarefa.prioridade} />
+        <span className={styles.cardId}>APS-{tarefa.id}</span>
         <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
       </div>
+
+      {/* Tag + impedimento dot */}
+      <div className={styles.cardTagRow}>
+        <CardTypeTag tipo={tarefa.tipo} prioridade={tarefa.prioridade} />
+        {tarefa.impedimento && <span className={styles.impedimentoDot} title="Impedimento" />}
+      </div>
+
+      {/* Title */}
       <p className={styles.cardTitle}>{tarefa.titulo}</p>
+
+      {/* Description */}
       {tarefa.descricao && tarefa.descricao !== tarefa.titulo && (
         <p className={styles.cardDesc}>{tarefa.descricao}</p>
       )}
+
+      {/* Footer */}
       <div className={styles.cardFooter}>
-        {tarefa.estimativa > 0 && (
-          <span className={styles.cardPts}>{tarefa.estimativa} SP</span>
-        )}
-        {tarefa.responsavelNome && (
-          <AvatarBubble nome={tarefa.responsavelNome} size={22} />
-        )}
+        <div className={styles.cardFooterLeft}>
+          {hasAnexos && (
+            <span className={styles.cardMetaChip} title={`${tarefa.anexosCount} anexo(s)`}>
+              <IconAttach /> {tarefa.anexosCount}
+            </span>
+          )}
+          {hasSubtarefas && (
+            <span className={styles.cardMetaChip} title={`${tarefa.subtarefasCount} sub-tarefa(s)`}>
+              <IconCheckSquare /> {tarefa.subtarefasCount}
+            </span>
+          )}
+          {tarefa.impedimento && (
+            <span className={styles.impedimentoBadge}>
+              <IconBlock /> Impedimento
+            </span>
+          )}
+        </div>
+        <div className={styles.cardFooterRight}>
+          {tarefa.estimativa > 0 && (
+            <span className={styles.cardPts}>{tarefa.estimativa} SP</span>
+          )}
+          {tarefa.responsaveis?.length > 0 && (
+            <div className={styles.cardAvatars}>
+              {tarefa.responsaveis.slice(0, 3).map(r => (
+                <AvatarBubble key={r.id} nome={r.nome} size={24} />
+              ))}
+              {tarefa.responsaveis.length > 3 && (
+                <div className={styles.cardAvatarMore}>+{tarefa.responsaveis.length - 3}</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-/* ── Board column — drop target ── */
-function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete }) {
+/* ── Board column ── */
+function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete, canCreateTarefas }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [dropping, setDropping]     = useState(false)
   const counter = useRef(0)
@@ -505,41 +621,37 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit,
 
   const colCls = [
     styles.column,
-    isCompact ? styles.columnCompact : '',
     isDragOver ? styles.columnDragOver : '',
     dropping   ? styles.columnDropping : '',
   ].filter(Boolean).join(' ')
 
   return (
-    <div
-      className={colCls}
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
+    <div className={colCls} onDragOver={onDragOver} onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDrop={onDrop}>
       <div className={styles.columnHeader}>
         <span className={styles.columnTitle}>{column.label}</span>
         <div className={styles.columnHeaderRight}>
           <span className={styles.columnCount}>{tarefas.length}</span>
-          <button
-            className={styles.columnAddBtn}
-            onClick={() => onAddCard(column.key)}
-            title={`Adicionar card em ${column.label}`}
-            type="button"
-          >
-            +
-          </button>
+          {canCreateTarefas && (
+            <button
+              className={styles.columnAddBtn}
+              onClick={() => onAddCard(column.key)}
+              title={`Adicionar card em ${column.label}`}
+              type="button"
+            >
+              +
+            </button>
+          )}
         </div>
       </div>
 
       <div className={styles.columnBody}>
-        {tarefas.map(t => (
+        {tarefas.map((t, i) => (
           <TaskCard
             key={t.id}
             tarefa={t}
             projectId={projectId}
             compact={isCompact}
+            altBg={isCompact && i % 2 === 1}
             onEdit={() => onEdit(t)}
             onDelete={() => onDelete(t)}
           />
@@ -558,13 +670,14 @@ export default function BoardPage() {
   const { projectId } = useParams()
   const navigate      = useNavigate()
 
-  const [sprint, setSprint]     = useState(null)
-  const [tarefas, setTarefas]   = useState([])
-  const [projeto, setProjeto]   = useState(null)
-  const [membros, setMembros]   = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState('')
-  const [noSprint, setNoSprint] = useState(false)
+  const [sprint, setSprint]           = useState(null)
+  const [tarefas, setTarefas]         = useState([])
+  const [projeto, setProjeto]         = useState(null)
+  const [membros, setMembros]         = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState('')
+  const [noSprint, setNoSprint]       = useState(false)
 
   const [editingCard, setEditingCard]           = useState(null)
   const [addingCardStatus, setAddingCardStatus] = useState(null)
@@ -573,8 +686,8 @@ export default function BoardPage() {
   const [sortBy, setSortBy]   = useState('none')
   const [sortDir, setSortDir] = useState('asc')
 
-  const [showFilters, setShowFilters]             = useState(false)
-  const [filterText, setFilterText]               = useState('')
+  const [showFilters, setShowFilters]               = useState(false)
+  const [filterText, setFilterText]                 = useState('')
   const [filterResponsaveis, setFilterResponsaveis] = useState(new Set())
   const [filterPrioridades, setFilterPrioridades]   = useState(new Set())
   const [filterImpedimento, setFilterImpedimento]   = useState(false)
@@ -603,11 +716,13 @@ export default function BoardPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(''); setNoSprint(false)
     try {
-      const [sprints, proj, mems] = await Promise.all([
+      const [sprints, proj, mems, userData] = await Promise.all([
         projetoService.listarSprints(projectId),
         projetoService.buscar(projectId),
         projetoService.listarMembros(projectId),
+        projetoService.buscarUsuarioAtual().catch(() => null),
       ])
+      setCurrentUser(userData)
       setProjeto(proj)
       setMembros(Array.isArray(mems) ? mems : [])
 
@@ -637,7 +752,7 @@ export default function BoardPage() {
       await projetoService.editarSprint(projectId, sprint.id, { status: 'CONCLUIDA' })
       navigate(`/project/${projectId}/backlog`)
     } catch {
-      alert('Erro ao encerrar sprint.')
+      alert('Sem permissão ou erro ao encerrar sprint.')
       setClosingSprint(false)
     }
   }
@@ -673,7 +788,7 @@ export default function BoardPage() {
     const txt = filterText.trim().toLowerCase()
     return list.filter(t => {
       if (txt && !t.titulo.toLowerCase().includes(txt)) return false
-      if (filterResponsaveis.size > 0 && !filterResponsaveis.has(t.responsavelId)) return false
+      if (filterResponsaveis.size > 0 && !t.responsaveis?.some(r => filterResponsaveis.has(r.id))) return false
       if (filterPrioridades.size > 0 && !filterPrioridades.has(t.prioridade)) return false
       if (filterImpedimento && !t.impedimento) return false
       return true
@@ -704,32 +819,30 @@ export default function BoardPage() {
     </div>
   )
 
+  const myMembro = membros.find(m => m.id === currentUser?.id)
+  const isGerente = myMembro?.papel === 'gerente'
+  const canCreateTarefas = myMembro?.papel !== 'visualizador'
+
   const tasksByStatus = Object.fromEntries(
     COLUMNS.map(col => [col.key, applySort(applyFilters(tarefas.filter(t => t.status === col.key)))])
   )
-  const totalConcluidas = tasksByStatus['CONCLUIDA']?.length ?? 0
-  const progPct = tarefas.length > 0 ? Math.round((totalConcluidas / tarefas.length) * 100) : 0
 
   const visibleMembros = membros.slice(0, 4)
   const extraMembros   = membros.length > 4 ? membros.length - 4 : 0
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div className={styles.pageHeaderLeft}>
+      {/* Sub-header ribbon */}
+      <div className={styles.subHeader}>
+        <div className={styles.subHeaderLeft}>
           <h1 className={styles.pageTitle}>Quadro {projeto?.nome}</h1>
-          <div className={styles.pageSubtitle}>
-            <span className={styles.sprintChip}>
-              <IconBolt />
-              {sprint.nome} · Em andamento
-            </span>
-            <span className={styles.progText}>
-              · {tarefas.length} card{tarefas.length !== 1 ? 's' : ''} · {progPct}% concluído
-            </span>
-          </div>
+          <span className={styles.sprintChip}>
+            <IconBolt />
+            {sprint.nome} · Em andamento
+          </span>
         </div>
 
-        <div className={styles.pageActions}>
+        <div className={styles.subHeaderRight}>
           {visibleMembros.length > 0 && (
             <div className={styles.memberAvatars}>
               {visibleMembros.map(m => (
@@ -752,12 +865,8 @@ export default function BoardPage() {
           </button>
 
           <div className={styles.sortWrap}>
-            <select
-              className={styles.sortSelect}
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-            >
-              <option value="none">Ordenar por</option>
+            <select className={styles.sortSelect} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="none">Ordenar</option>
               <option value="prioridade">Prioridade</option>
               <option value="estimativa">Estimativa</option>
             </select>
@@ -773,34 +882,38 @@ export default function BoardPage() {
             )}
           </div>
 
-          <button className={styles.btnRefresh} onClick={fetchAll} title="Recarregar" type="button">
-            ↻
-          </button>
+          <button className={styles.btnRefresh} onClick={fetchAll} title="Recarregar" type="button">↻</button>
 
-          <button
-            className={styles.btnEncerrar}
-            onClick={handleEncerrarSprint}
-            disabled={closingSprint}
-            type="button"
-          >
-            {closingSprint ? 'Encerrando...' : 'Encerrar Sprint'}
-          </button>
+          {isGerente && (
+            <button
+              className={styles.btnEncerrar}
+              onClick={handleEncerrarSprint}
+              disabled={closingSprint}
+              type="button"
+            >
+              {closingSprint ? 'Encerrando...' : 'Encerrar Sprint'}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={styles.board}>
-        {COLUMNS.map(col => (
-          <BoardColumn
-            key={col.key}
-            column={col}
-            tarefas={tasksByStatus[col.key] ?? []}
-            projectId={projectId}
-            onRefresh={fetchAll}
-            onAddCard={status => setAddingCardStatus(status)}
-            onEdit={t => setEditingCard(t)}
-            onDelete={handleDelete}
-          />
-        ))}
+      {/* Board canvas */}
+      <div className={styles.boardCanvas}>
+        <div className={styles.board}>
+          {COLUMNS.map(col => (
+            <BoardColumn
+              key={col.key}
+              column={col}
+              tarefas={tasksByStatus[col.key] ?? []}
+              projectId={projectId}
+              onRefresh={fetchAll}
+              onAddCard={status => setAddingCardStatus(status)}
+              onEdit={t => setEditingCard(t)}
+              onDelete={handleDelete}
+              canCreateTarefas={canCreateTarefas}
+            />
+          ))}
+        </div>
       </div>
 
       {editingCard && (
