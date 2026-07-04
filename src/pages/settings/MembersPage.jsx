@@ -68,7 +68,7 @@ const CARGO_OPTIONS = [
   { label: 'Scrum Master',           value: 'Scrum Master' },
   { label: 'Desenvolvedor',          value: 'Desenvolvedor' },
   { label: 'QA',                     value: 'QA' },
-  { label: 'Analista de Requisitos', value: 'Analista de Requisistos' },
+  { label: 'Analista de Requisitos', value: 'Analista de Requisitos' },
   { label: 'Designer de UI/UX',      value: 'Designer de UI/UX' },
   { label: 'Arquiteto de Software',  value: 'Arquiteto de Software' },
   { label: 'DevOps',                 value: 'DevOps' },
