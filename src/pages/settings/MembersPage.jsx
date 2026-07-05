@@ -410,9 +410,13 @@ export default function MembersPage() {
   useEffect(() => { fetchMembros() }, [fetchMembros])
 
   async function handleRemove(email) {
-    await projetoService.removerMembro(projectId, email)
-    setToast('Membro removido do projeto.')
-    fetchMembros()
+    try {
+      await projetoService.removerMembro(projectId, email)
+      setToast('Membro removido do projeto.')
+      fetchMembros()
+    } catch {
+      setToast('Erro ao remover membro. Tente novamente.')
+    }
   }
 
   async function handleEditSave(membroId, data) {
