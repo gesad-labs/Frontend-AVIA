@@ -102,10 +102,6 @@ export default function ForgotPasswordPage() {
 
         </div>
 
-        <p className={styles.support}>
-          Problemas com o acesso?{' '}
-          <a href="mailto:suporte@avia.com">Contate o suporte</a>
-        </p>
       </div>
     </div>
   )

@@ -87,7 +87,7 @@ function initials(name = '') {
 
 function getAccessBadge(allowed, total) {
   if (allowed === total) return { label: 'ACESSO TOTAL',       mod: styles.badgeTotal }
-  if (allowed === 2)     return { label: 'ACESSO QUASE TOTAL', mod: styles.badgeAlmost }
+  if (allowed === 2)     return { label: 'ACESSO PARCIAL',     mod: styles.badgeAlmost }
   if (allowed === 1)     return { label: 'LIMITADO',           mod: styles.badgeLimited }
   return                        { label: 'SEM ACESSO',         mod: styles.badgeNone }
 }

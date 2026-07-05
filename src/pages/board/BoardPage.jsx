@@ -295,7 +295,7 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>Editar Card</h2>
+          <h2 className={styles.modalTitle}>Editar Tarefa</h2>
           <button className={styles.modalClose} onClick={onClose} type="button">×</button>
         </div>
         <form onSubmit={handleSubmit} className={styles.modalForm}>
@@ -359,9 +359,17 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
   const [prioridade, setPrioridade] = useState('MEDIA')
   const [status, setStatus]         = useState(defaultStatus)
   const [tipo, setTipo]             = useState('')
-  const [responsavelId, setResponsavelId] = useState('')
+  const [responsaveisIds, setResponsaveisIds] = useState(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
+
+  function toggleResp(id) {
+    setResponsaveisIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -375,7 +383,7 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
         prioridade,
         estimativa:    estimativa !== '' ? Number(estimativa) : null,
         sprintId:      sprint.id,
-        responsaveisIds: responsavelId ? [Number(responsavelId)] : [],
+        responsaveisIds: Array.from(responsaveisIds),
         tipo:          tipo || null,
       })
       onSaved()
@@ -429,11 +437,15 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
           </div>
           {membros.length > 0 && (
             <label className={styles.formLabel}>
-              Responsável
-              <select className={styles.formInput} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-                <option value="">Sem responsável</option>
-                {membros.map(m => <option key={m.id} value={m.id}>{m.nome || m.email}</option>)}
-              </select>
+              Responsáveis
+              <div className={styles.checkList}>
+                {membros.map(m => (
+                  <label key={m.id} className={styles.checkItem}>
+                    <input type="checkbox" checked={responsaveisIds.has(m.id)} onChange={() => toggleResp(m.id)} />
+                    <span>{m.nome || m.email}</span>
+                  </label>
+                ))}
+              </div>
             </label>
           )}
           <div className={styles.modalActions}>
@@ -447,7 +459,7 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
 }
 
 /* ── Card context menu ── */
-function CardMenu({ tarefa, onEdit, onDelete }) {
+function CardMenu({ tarefa, onEdit, onDelete, canEdit, canDelete }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -470,10 +482,10 @@ function CardMenu({ tarefa, onEdit, onDelete }) {
       >
         <IconDots />
       </button>
-      {open && (
+      {open && (canEdit || canDelete) && (
         <div className={styles.cardMenu}>
-          <button onClick={() => act(onEdit)}>Editar</button>
-          <button className={styles.cardMenuDanger} onClick={() => act(onDelete)}>Excluir</button>
+          {canEdit && <button onClick={() => act(onEdit)}>Editar</button>}
+          {canDelete && <button className={styles.cardMenuDanger} onClick={() => act(onDelete)}>Excluir</button>}
         </div>
       )}
     </div>
@@ -481,7 +493,7 @@ function CardMenu({ tarefa, onEdit, onDelete }) {
 }
 
 /* ── Task card ── */
-function TaskCard({ tarefa, onEdit, onDelete, compact, altBg }) {
+function TaskCard({ tarefa, onEdit, onDelete, compact, altBg, canEdit, canDelete }) {
   const [dragging, setDragging] = useState(false)
 
   function handleDragStart(e) {
@@ -513,7 +525,7 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg }) {
           <span className={styles.cardCompactTitle}>{tarefa.titulo}</span>
         </div>
         <div className={styles.cardCompactRight}>
-          <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+          <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
         </div>
       </div>
     )
@@ -536,7 +548,7 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg }) {
       {/* Top row: ID + menu */}
       <div className={styles.cardTopRow}>
         <span className={styles.cardId}>APS-{tarefa.id}</span>
-        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} />
+        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
       </div>
 
       {/* Tag + impedimento dot */}
@@ -593,7 +605,7 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg }) {
 }
 
 /* ── Board column ── */
-function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete, canCreateTarefas }) {
+function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete, canCreateTarefas, canEdit, canDelete }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [dropping, setDropping]     = useState(false)
   const counter = useRef(0)
@@ -654,6 +666,8 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit,
             altBg={isCompact && i % 2 === 1}
             onEdit={() => onEdit(t)}
             onDelete={() => onDelete(t)}
+            canEdit={canEdit}
+            canDelete={canDelete}
           />
         ))}
         {isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
@@ -911,6 +925,8 @@ export default function BoardPage() {
               onEdit={t => setEditingCard(t)}
               onDelete={handleDelete}
               canCreateTarefas={canCreateTarefas}
+              canEdit={canCreateTarefas}
+              canDelete={isGerente}
             />
           ))}
         </div>

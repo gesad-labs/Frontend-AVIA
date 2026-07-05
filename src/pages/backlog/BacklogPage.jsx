@@ -259,7 +259,7 @@ function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Editar Card</h3>
+          <h3 className={styles.modalTitle}>Editar Tarefa</h3>
           <button className={styles.modalClose} onClick={onClose}><XIcon /></button>
         </div>
         <form onSubmit={handleSubmit} className={styles.modalForm}>
@@ -367,7 +367,7 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
 }
 
 /* ── Task row — draggable ── */
-function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh }) {
+function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh, isGerente, canEditTarefas }) {
   const navigate = useNavigate()
   const hasActivePoker = activePokerTasks?.has(tarefa.id)
   const [editOpen, setEditOpen] = useState(false)
@@ -428,9 +428,9 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
             <PokerIcon />
             {hasActivePoker && <span className={styles.pokerActiveDot} />}
           </button>
-          <button className={styles.iconBtn} title="Detalhes" onClick={() => navigate(`/project/${projectId}/task/${tarefa.id}`)}><EditIcon /></button>
-          <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>
-          <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>
+          {canEditTarefas !== false && <button className={styles.iconBtn} title="Detalhes" onClick={() => navigate(`/project/${projectId}/task/${tarefa.id}`)}><EditIcon /></button>}
+          {canEditTarefas !== false && <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>}
+          {isGerente && <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>}
         </div>
       </div>
 
@@ -494,7 +494,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
   const conclPts = tarefas.filter(t => t.status === 'CONCLUIDA').reduce((a, t) => a + (t.estimativa || 0), 0)
   const progPct  = totalPts > 0 ? Math.round((conclPts / totalPts) * 100) : 0
 
-  const canStart  = sprint.status === 'EM_PLANEJAMENTO'
+  const canStart  = sprint.status === 'EM_PLANEJAMENTO' && !allSprints.some(s => s.status === 'EM_ANDAMENTO')
   const canFinish = sprint.status === 'EM_ANDAMENTO'
 
   async function changeStatus(novoStatus) {
@@ -544,7 +544,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
         </div>
         <div className={styles.sprintCardActions}>
           {isGerente && canStart  && <button className={styles.btnStart}  disabled={updatingStatus} onClick={() => changeStatus('EM_ANDAMENTO')}>{updatingStatus ? '...' : 'Iniciar Sprint'}</button>}
-          {isGerente && canFinish && <button className={styles.btnFinish} disabled={updatingStatus} onClick={() => changeStatus('CONCLUIDA')}>{updatingStatus ? '...' : 'Concluir Sprint'}</button>}
+          {isGerente && canFinish && <button className={styles.btnFinish} disabled={updatingStatus} onClick={() => changeStatus('CONCLUIDA')}>{updatingStatus ? '...' : 'Encerrar Sprint'}</button>}
         </div>
       </div>
 
@@ -560,7 +560,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
           ) : (
             <div className={styles.taskList}>
               {tarefas.map(t => (
-                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} />
+                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} isGerente={isGerente} canEditTarefas={canCreateTarefas} />
               ))}
               {dropZone.isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
             </div>
@@ -747,7 +747,7 @@ export default function BacklogPage() {
               ) : (
                 <div className={styles.taskList}>
                   {backlogTarefas.map(t => (
-                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={fetchAll} />
+                    <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={sprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={fetchAll} isGerente={isGerente} canEditTarefas={canCreateTarefas} />
                   ))}
                   {backlogDrop.isDragOver && <div className={styles.dropHint}>Soltar aqui para devolver ao backlog</div>}
                 </div>
