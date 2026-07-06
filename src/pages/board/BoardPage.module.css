@@ -419,6 +419,94 @@
   font-family: monospace;
 }
 
+.cardTopRowActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Card notification bell ── */
+.cardNotifBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 10px;
+  padding: 2px 6px 2px 5px;
+  cursor: pointer;
+  color: #b45309;
+  line-height: 1;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.cardNotifBtn:hover { background: #fde68a; }
+
+.cardNotifCount {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.cardNotifDropdown {
+  min-width: 252px;
+  max-width: 300px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardNotifItem {
+  padding: 10px 12px 9px;
+  border-radius: 7px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.cardNotifItem:last-child { border-bottom: none; }
+
+.cardNotifMsg {
+  font-size: 0.78rem;
+  color: #374151;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.cardNotifActions {
+  display: flex;
+  gap: 6px;
+}
+
+.cardNotifVer {
+  flex: 1;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cardNotifVer:hover { background: #4f46e5; }
+
+.cardNotifLida {
+  flex: 1;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cardNotifLida:hover { background: #e2e8f0; }
+
 .cardTagRow {
   display: flex;
   align-items: center;

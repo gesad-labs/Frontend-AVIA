@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { createPokerClient } from '../../services/planningPokerSocket'
@@ -306,14 +307,94 @@ function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
   )
 }
 
+/* ── Multi-select dropdown (portal, avoids overflow clipping) ── */
+function MultiSelectDropdown({ membros, selected, onToggle, placeholder }) {
+  const [open, setOpen] = useState(false)
+  const [pos,  setPos]  = useState({ top: 0, left: 0, width: 0, openUp: false })
+  const btnRef = useRef(null)
+
+  function openDropdown() {
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const openUp = window.innerHeight - rect.bottom < 160
+    setPos({
+      top:    openUp ? undefined : rect.bottom + 4,
+      bottom: openUp ? window.innerHeight - rect.top + 4 : undefined,
+      left:   rect.left,
+      width:  rect.width,
+      openUp,
+    })
+    setOpen(true)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  const label = selected.size === 0
+    ? placeholder
+    : membros.filter(m => selected.has(m.id)).map(m => m.nome || m.email).join(', ')
+
+  return (
+    <div className={styles.multiSelect} onMouseDown={e => e.stopPropagation()}>
+      <button
+        ref={btnRef}
+        type="button"
+        className={styles.multiSelectBtn}
+        onClick={() => open ? setOpen(false) : openDropdown()}
+      >
+        <span className={styles.multiSelectLabel}>{label}</span>
+        <span>▾</span>
+      </button>
+      {open && createPortal(
+        <div
+          className={styles.multiSelectDropdown}
+          style={{
+            position: 'fixed',
+            top:    pos.top,
+            bottom: pos.bottom,
+            left:   pos.left,
+            width:  pos.width,
+            zIndex: 9999,
+          }}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {membros.map(m => (
+            <label key={m.id} className={styles.multiSelectItem}>
+              <input
+                type="checkbox"
+                checked={selected.has(m.id)}
+                onChange={() => onToggle(m.id)}
+              />
+              {m.nome || m.email}
+            </label>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
 /* ── Add task form (inline) ── */
 function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
-  const [titulo, setTitulo]               = useState('')
-  const [estimativa, setEstimativa]       = useState('')
-  const [prioridade, setPrioridade]       = useState('')
-  const [responsavelId, setResponsavelId] = useState('')
-  const [loading, setLoading]             = useState(false)
-  const [error, setError]                 = useState('')
+  const [titulo,        setTitulo]        = useState('')
+  const [estimativa,    setEstimativa]    = useState('')
+  const [prioridade,    setPrioridade]    = useState('')
+  const [responsaveisIds, setResponsaveisIds] = useState(new Set())
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+
+  function toggleResp(id) {
+    setResponsaveisIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -321,15 +402,15 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
     setLoading(true); setError('')
     try {
       await projetoService.criarTarefa(projectId, {
-        titulo:        titulo.trim(),
-        descricao:     titulo.trim(),
-        status:        'A_FAZER',
-        estimativa:    parseInt(estimativa, 10) || null,
-        prioridade:    prioridade || null,
-        sprintId:      sprintId ?? null,
-        responsaveisIds: responsavelId ? [Number(responsavelId)] : [],
+        titulo:          titulo.trim(),
+        descricao:       titulo.trim(),
+        status:          'A_FAZER',
+        estimativa:      parseInt(estimativa, 10) || null,
+        prioridade:      prioridade || null,
+        sprintId:        sprintId ?? null,
+        responsaveisIds: Array.from(responsaveisIds),
       })
-      setTitulo(''); setEstimativa(''); setPrioridade(''); setResponsavelId('')
+      setTitulo(''); setEstimativa(''); setPrioridade(''); setResponsaveisIds(new Set())
       onAdded()
     } catch {
       setError('Erro ao criar card.')
@@ -350,12 +431,12 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
           <option value="BAIXA">Baixa</option>
         </select>
         {membros.length > 0 && (
-          <select className={styles.addSelect} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-            <option value="">Responsável</option>
-            {membros.map(m => (
-              <option key={m.id} value={m.id}>{m.nome || m.email}</option>
-            ))}
-          </select>
+          <MultiSelectDropdown
+            membros={membros}
+            selected={responsaveisIds}
+            onToggle={toggleResp}
+            placeholder="Responsáveis"
+          />
         )}
         <button type="submit" className={styles.addBtn} disabled={loading}>
           <PlusIcon />{loading ? '...' : 'Adicionar'}

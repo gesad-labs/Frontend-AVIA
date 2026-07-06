@@ -1,6 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
+import { useNotificacoesCtx } from '../../contexts/NotificacoesContext'
 import styles from './BoardPage.module.css'
 
 const COLUMNS = [
@@ -39,10 +41,7 @@ const PRIORIDADE_STYLE = {
   BAIXA: { bg: '#f0fdf4', color: '#166534' },
 }
 
-const TIPO_OPTIONS = [
-  'FEATURE', 'BUG', 'MELHORIA', 'ARQUITETURA', 'BACKEND', 'FRONTEND',
-  'DESIGN', 'DOC', 'CORE', 'INFRA', 'PESQUISA', 'TESTE',
-]
+const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
 
 /* ── Helpers ── */
 const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
@@ -125,6 +124,103 @@ function IconCheckSquare() {
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
     </svg>
+  )
+}
+function IconBell() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+/* ── Card notification bell ── */
+function CardNotifBell({ notifs }) {
+  const [open, setOpen]       = useState(false)
+  const [dropPos, setDropPos] = useState(null)
+  const btnRef  = useRef(null)
+  const dropRef = useRef(null)
+  const { marcarLida }  = useNotificacoesCtx()
+  const navigate        = useNavigate()
+  const { projectId }   = useParams()
+
+  useEffect(() => {
+    if (!open) return
+    function close(e) {
+      if (btnRef.current?.contains(e.target)) return
+      if (dropRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  function handleOpen(e) {
+    e.stopPropagation()
+    const rect = btnRef.current.getBoundingClientRect()
+    const dropH = Math.min(notifs.length * 96 + 16, 300)
+    if (window.innerHeight - rect.bottom < dropH) {
+      setDropPos({ bottom: window.innerHeight - rect.top + 4, left: rect.left })
+    } else {
+      setDropPos({ top: rect.bottom + 4, left: rect.left })
+    }
+    setOpen(v => !v)
+  }
+
+  if (notifs.length === 0) return null
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className={styles.cardNotifBtn}
+        onClick={handleOpen}
+        title={`${notifs.length} notificação(ões) não lida(s)`}
+        type="button"
+      >
+        <IconBell />
+        <span className={styles.cardNotifCount}>{notifs.length}</span>
+      </button>
+      {open && dropPos && createPortal(
+        <div
+          ref={dropRef}
+          className={styles.cardNotifDropdown}
+          style={{
+            position: 'fixed',
+            top:    dropPos.top    ?? 'auto',
+            bottom: dropPos.bottom ?? 'auto',
+            left:   dropPos.left,
+            zIndex: 9999,
+          }}
+        >
+          {notifs.map(n => (
+            <div key={n.id} className={styles.cardNotifItem}>
+              <p className={styles.cardNotifMsg}>{n.mensagem}</p>
+              <div className={styles.cardNotifActions}>
+                <button
+                  className={styles.cardNotifVer}
+                  onClick={() => {
+                    marcarLida(n.id)
+                    if (n.tarefaId) navigate(`/project/${projectId}/task/${n.tarefaId}`)
+                    setOpen(false)
+                  }}
+                >
+                  Ver notificação
+                </button>
+                <button
+                  className={styles.cardNotifLida}
+                  onClick={() => { marcarLida(n.id); setOpen(false) }}
+                >
+                  Marcar lido
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
 
@@ -459,7 +555,7 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
 }
 
 /* ── Card context menu ── */
-function CardMenu({ tarefa, onEdit, onDelete, canEdit, canDelete }) {
+function CardMenu({ tarefa, onDetail, onEdit, onDelete, canEdit, canDelete }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -482,8 +578,9 @@ function CardMenu({ tarefa, onEdit, onDelete, canEdit, canDelete }) {
       >
         <IconDots />
       </button>
-      {open && (canEdit || canDelete) && (
+      {open && (
         <div className={styles.cardMenu}>
+          <button onClick={() => act(onDetail)}>Detalhes</button>
           {canEdit && <button onClick={() => act(onEdit)}>Editar</button>}
           {canDelete && <button className={styles.cardMenuDanger} onClick={() => act(onDelete)}>Excluir</button>}
         </div>
@@ -493,7 +590,7 @@ function CardMenu({ tarefa, onEdit, onDelete, canEdit, canDelete }) {
 }
 
 /* ── Task card ── */
-function TaskCard({ tarefa, onEdit, onDelete, compact, altBg, canEdit, canDelete }) {
+function TaskCard({ tarefa, notifs = [], onDetail, onEdit, onDelete, compact, altBg, canEdit, canDelete }) {
   const [dragging, setDragging] = useState(false)
 
   function handleDragStart(e) {
@@ -525,7 +622,8 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg, canEdit, canDelete
           <span className={styles.cardCompactTitle}>{tarefa.titulo}</span>
         </div>
         <div className={styles.cardCompactRight}>
-          <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
+          <CardNotifBell notifs={notifs} />
+          <CardMenu tarefa={tarefa} onDetail={onDetail} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
         </div>
       </div>
     )
@@ -545,10 +643,13 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg, canEdit, canDelete
       onDragStart={handleDragStart}
       onDragEnd={() => setDragging(false)}
     >
-      {/* Top row: ID + menu */}
+      {/* Top row: ID + notifications + menu */}
       <div className={styles.cardTopRow}>
         <span className={styles.cardId}>APS-{tarefa.id}</span>
-        <CardMenu tarefa={tarefa} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
+        <div className={styles.cardTopRowActions}>
+          <CardNotifBell notifs={notifs} />
+          <CardMenu tarefa={tarefa} onDetail={onDetail} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
+        </div>
       </div>
 
       {/* Tag + impedimento dot */}
@@ -605,7 +706,7 @@ function TaskCard({ tarefa, onEdit, onDelete, compact, altBg, canEdit, canDelete
 }
 
 /* ── Board column ── */
-function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit, onDelete, canCreateTarefas, canEdit, canDelete }) {
+function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onDetail, onEdit, onDelete, canCreateTarefas, canEdit, canDelete, notifsByTarefaId }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [dropping, setDropping]     = useState(false)
   const counter = useRef(0)
@@ -662,8 +763,10 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit,
             key={t.id}
             tarefa={t}
             projectId={projectId}
+            notifs={notifsByTarefaId?.get(t.id) ?? []}
             compact={isCompact}
             altBg={isCompact && i % 2 === 1}
+            onDetail={() => onDetail(t)}
             onEdit={() => onEdit(t)}
             onDelete={() => onDelete(t)}
             canEdit={canEdit}
@@ -683,6 +786,17 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onEdit,
 export default function BoardPage() {
   const { projectId } = useParams()
   const navigate      = useNavigate()
+
+  const { notificacoes } = useNotificacoesCtx()
+
+  const cardNotifMap = useMemo(() => {
+    const map = new Map()
+    notificacoes.filter(n => !n.lida && n.tarefaId).forEach(n => {
+      if (!map.has(n.tarefaId)) map.set(n.tarefaId, [])
+      map.get(n.tarefaId).push(n)
+    })
+    return map
+  }, [notificacoes])
 
   const [sprint, setSprint]           = useState(null)
   const [tarefas, setTarefas]         = useState([])
@@ -921,12 +1035,14 @@ export default function BoardPage() {
               tarefas={tasksByStatus[col.key] ?? []}
               projectId={projectId}
               onRefresh={fetchAll}
-              onAddCard={status => setAddingCardStatus(status)}
+              onAddCard={status => navigate(`/project/${projectId}/card/new?sprintId=${sprint.id}&status=${status}`)}
+              onDetail={t => navigate(`/project/${projectId}/task/${t.id}`)}
               onEdit={t => setEditingCard(t)}
               onDelete={handleDelete}
               canCreateTarefas={canCreateTarefas}
               canEdit={canCreateTarefas}
               canDelete={isGerente}
+              notifsByTarefaId={cardNotifMap}
             />
           ))}
         </div>
