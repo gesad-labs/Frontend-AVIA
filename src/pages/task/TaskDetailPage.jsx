@@ -147,7 +147,6 @@ function SideDropdown({ options, value, onChange, renderTrigger }) {
 function AnexarModal({ onClose, onAdd }) {
   const [nome, setNome] = useState('')
   const [url,  setUrl]  = useState('')
-  const [tipo, setTipo] = useState('link')
   const [busy, setBusy] = useState(false)
   const [err,  setErr]  = useState('')
 
@@ -156,10 +155,10 @@ function AnexarModal({ onClose, onAdd }) {
     if (!nome.trim() || !url.trim()) { setErr('Preencha todos os campos.'); return }
     setBusy(true); setErr('')
     try {
-      await onAdd({ nome: nome.trim(), tipoArquivo: tipo, url: url.trim() })
+      await onAdd({ nome: nome.trim(), tipoArquivo: 'link', url: url.trim() })
       onClose()
     } catch {
-      setErr('Erro ao adicionar anexo.')
+      setErr('Erro ao adicionar link.')
     } finally {
       setBusy(false)
     }
@@ -169,23 +168,16 @@ function AnexarModal({ onClose, onAdd }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Adicionar Anexo</h3>
+          <h3 className={styles.modalTitle}>Adicionar Link</h3>
           <button type="button" className={styles.modalClose} onClick={onClose}><IconX /></button>
         </div>
         <form onSubmit={handleSubmit} className={styles.modalBody}>
-          <label className={styles.fieldLabel}>Nome do arquivo</label>
+          <label className={styles.fieldLabel}>Nome</label>
           <input className={styles.fieldInput} value={nome} onChange={e => setNome(e.target.value)}
-            placeholder="ex: Documento.pdf" autoFocus />
+            placeholder="ex: Documento de requisitos" autoFocus />
           <label className={styles.fieldLabel} style={{ marginTop: 14 }}>URL / Link</label>
           <input className={styles.fieldInput} value={url} onChange={e => setUrl(e.target.value)}
             placeholder="https://..." />
-          <label className={styles.fieldLabel} style={{ marginTop: 14 }}>Tipo</label>
-          <select className={styles.fieldSelect} value={tipo} onChange={e => setTipo(e.target.value)}>
-            <option value="link">Link externo</option>
-            <option value="imagem">Imagem</option>
-            <option value="pdf">PDF</option>
-            <option value="documento">Documento</option>
-          </select>
           {err && <p className={styles.fieldErr}>{err}</p>}
           <div className={styles.modalFooter}>
             <button type="button" className={styles.btnSecondary} onClick={onClose}>Cancelar</button>
@@ -314,7 +306,9 @@ export default function TaskDetailPage() {
   const [storyEdit,     setStoryEdit]     = useState(false)
   const [storyDraft,    setStoryDraft]    = useState('')
   const [membrosOpen,   setMembrosOpen]   = useState(false)
-  const membrosRef = useRef(null)
+  const [mentionQuery,  setMentionQuery]  = useState(null)
+  const membrosRef  = useRef(null)
+  const commentRef  = useRef(null)
 
   /* Load everything */
   const fetchAll = useCallback(async () => {
@@ -418,13 +412,45 @@ export default function TaskDetailPage() {
     await patchTarefa({ tarefaParenteId: parentTaskId })
   }
 
+  function parseEmailsMencionados(text) {
+    return membros
+      .filter(m => m.nome && m.email && text.includes(`@${m.nome}`))
+      .map(m => m.email)
+  }
+
+  function handleCommentChange(e) {
+    const val = e.target.value
+    setNewComment(val)
+    const cursor = e.target.selectionStart
+    const before = val.slice(0, cursor)
+    const match  = before.match(/@(\S*)$/)
+    setMentionQuery(match ? match[1] : null)
+  }
+
+  function insertMention(membro) {
+    const el     = commentRef.current
+    const cursor = el ? el.selectionStart : newComment.length
+    const before = newComment.slice(0, cursor)
+    const after  = newComment.slice(cursor)
+    const match  = before.match(/@(\S*)$/)
+    const prefix = match ? before.slice(0, before.length - match[0].length) : before
+    setNewComment(`${prefix}@${membro.nome} ${after}`)
+    setMentionQuery(null)
+    setTimeout(() => el?.focus(), 0)
+  }
+
   async function postComment() {
     if (!newComment.trim()) return
     setPostingComment(true)
     try {
-      const c = await projetoService.adicionarComentario(projectId, taskId, { descricao: newComment })
+      const emailsMencionados = parseEmailsMencionados(newComment)
+      const c = await projetoService.adicionarComentario(projectId, taskId, {
+        descricao: newComment,
+        emailsMencionados,
+      })
       setComentarios(prev => [...prev, c])
       setNewComment('')
+      setMentionQuery(null)
     } finally { setPostingComment(false) }
   }
 
@@ -579,17 +605,43 @@ export default function TaskDetailPage() {
             </div>
             <div className={styles.commentBox}>
               <textarea
+                ref={commentRef}
                 className={styles.commentInput}
                 value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                placeholder="Adicionar um comentário..."
+                onChange={handleCommentChange}
+                placeholder="Adicionar um comentário... Use @nome para mencionar"
                 rows={3}
-                onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) postComment() }}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setMentionQuery(null)
+                  if (e.key === 'Enter' && e.ctrlKey) postComment()
+                }}
               />
+              {mentionQuery !== null && (() => {
+                const sugestoes = membros.filter(m =>
+                  m.nome?.toLowerCase().startsWith(mentionQuery.toLowerCase())
+                )
+                return sugestoes.length > 0 ? (
+                  <div className={styles.mentionList}>
+                    {sugestoes.map(m => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className={styles.mentionItem}
+                        onMouseDown={e => { e.preventDefault(); insertMention(m) }}
+                      >
+                        <span className={styles.mentionAvatar} style={{ background: avatarColor(m.nome) }}>
+                          {initials(m.nome)}
+                        </span>
+                        {m.nome}
+                      </button>
+                    ))}
+                  </div>
+                ) : null
+              })()}
               <div className={styles.commentSubmitRow}>
                 <button className={styles.btnPrimary} onClick={postComment}
                   disabled={!newComment.trim() || postingComment}>
-                  {postingComment ? 'Enviando...' : 'Salvar'}
+                  {postingComment ? 'Enviando...' : 'Enviar comentário'}
                 </button>
               </div>
             </div>

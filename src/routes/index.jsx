@@ -21,6 +21,8 @@ import ProjectsPage from '../pages/projects/ProjectsPage';
 import ProjectPage from '../pages/project/ProjectPage';
 import BoardPage from '../pages/board/BoardPage';
 import BacklogPage from '../pages/backlog/BacklogPage';
+import CreateCardPage from '../pages/card/CreateCardPage';
+import EditCardPage from '../pages/card/EditCardPage';
 import SettingsPage from '../pages/settings/SettingsPage';
 import PermissionsPage from '../pages/settings/PermissionsPage';
 import ViewPermissionsPage from '../pages/settings/ViewPermissionsPage';
@@ -62,6 +64,8 @@ const router = createBrowserRouter([
       { path: '/project/:projectId/permissions',       element: <PermissionsPage /> },
       { path: '/project/:projectId/permissions/view', element: <ViewPermissionsPage /> },
       { path: '/project/:projectId/members',      element: <MembersPage /> },
+      { path: '/project/:projectId/card/new',               element: <CreateCardPage /> },
+      { path: '/project/:projectId/card/:tarefaId/edit',   element: <EditCardPage /> },
       { path: '/project/:projectId/planning-poker/:taskId', element: <PlanningPokerPage /> },
       { path: '/project/:projectId/task/:taskId',          element: <TaskDetailPage /> },
     ],
