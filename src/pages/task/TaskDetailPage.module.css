@@ -676,3 +676,45 @@
 .avatarStack { display: flex; align-items: center; }
 .avatarStack .memberAvatar { margin-left: -6px; border: 2px solid #fff; }
 .avatarStack .memberAvatar:first-child { margin-left: 0; }
+
+/* ─── @mention autocomplete ── */
+.mentionList {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.mentionItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1e293b;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.mentionItem:hover {
+  background: #f1f5f9;
+}
+
+.mentionAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

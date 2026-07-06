@@ -46,6 +46,11 @@ export const projetoService = {
   editarPermissoesMembro:    (id, uid, data) => api.patch(`/projetos/${id}/membros/${uid}/permissoes`, data),
   restaurarPermissoesMembro: (id, uid)       => api.put(`/projetos/${id}/membros/${uid}/permissoes`),
 
+  // Notificações
+  listarNotificacoes: (id)       => api.get(`/projetos/${id}/notificacoes`),
+  contarNaoLidas:     (id)       => api.get(`/projetos/${id}/notificacoes/nao-lidas`),
+  marcarNotifLida:    (id, nid)  => api.patch(`/projetos/${id}/notificacoes/${nid}/lida`),
+
   // Planning Poker
   criarSessaoPoker:              (id, tid) => api.post(`/projetos/${id}/tarefas/${tid}/planning-poker/sessoes`),
   buscarSessaoAtivaPoker:        (id, tid) => api.get(`/projetos/${id}/tarefas/${tid}/planning-poker/sessao-ativa`),
