@@ -199,8 +199,11 @@
 }
 .anexoImg { width: 100%; height: 100%; object-fit: cover; }
 .anexoIcon { font-size: 18px; }
-.anexoInfo { flex: 1; min-width: 0; }
+.anexoInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .anexoNome { display: block; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anexoNomeLink { display: block; font-size: 13px; font-weight: 600; color: #1d4ed8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.anexoNomeLink:hover { text-decoration: underline; color: #1e40af; }
+.anexoUrl { display: block; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .anexoTipo { display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; }
 .anexoAction {
   display: flex;
@@ -292,6 +295,22 @@
   color: #94a3b8;
   text-transform: uppercase;
 }
+.impedimentoCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  accent-color: #b91c1c;
+}
+.impedimentoCheck input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .sideSectionHead {
   display: flex;
   align-items: center;
