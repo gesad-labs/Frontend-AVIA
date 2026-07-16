@@ -5,34 +5,16 @@ import { useParams, Navigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import styles from './ViewPermissionsPage.module.css'
 
-/* ─────────────────────────────────────────
-   Permission map — mirrors usePermission.js, keyed by papel from backend
-───────────────────────────────────────── */
-const PERMISSIONS = {
-  GERENTE: new Set([
-    'view', 'comment',
-    'create_card', 'edit_card', 'delete_card',
-    'assign_card', 'add_collaborator',
-    'add_member', 'remove_member', 'change_member_role',
-    'create_sprint', 'start_sprint', 'end_sprint',
-    'start_poker', 'resolve_impediment',
-  ]),
-  MEMBRO: new Set([
-    'view', 'comment',
-    'create_card', 'edit_card', 'add_collaborator',
-  ]),
-  VISUALIZADOR: new Set(['view']),
-}
-
 const PERMISSION_GROUPS = [
   {
     key: 'content',
     label: 'Conteúdo & Tarefas',
     Icon: IconContentTasks,
     permissions: [
-      { key: 'create_card',  label: 'Criar e Editar Tarefas',        desc: 'Permite adicionar novas tarefas e modificar campos existentes.' },
-      { key: 'edit_card',    label: 'Mover Items no Quadro',          desc: 'Alterar o status de tarefas entre as colunas do quadro.' },
-      { key: 'delete_card',  label: 'Deletar Tarefas de Terceiros',   desc: 'Apenas o criador ou administradores podem remover tarefas.' },
+      { key: 'Criar Tarefas',   label: 'Criar tarefas',         desc: 'Permite adicionar novas tarefas no projeto.' },
+      { key: 'Editar Tarefas',  label: 'Editar tarefas',        desc: 'Modificar campos de tarefas existentes.' },
+      { key: 'Excluir Tarefas', label: 'Excluir tarefas',       desc: 'Remover tarefas criadas por outros membros.' },
+      { key: 'Mover Tarefas',   label: 'Mover items no quadro', desc: 'Alterar o status de tarefas entre as colunas.' },
     ],
   },
   {
@@ -40,9 +22,9 @@ const PERMISSION_GROUPS = [
     label: 'Estrutura do Projeto',
     Icon: IconStructure,
     permissions: [
-      { key: 'create_sprint', label: 'Criar Novas Sprints',                    desc: 'Modificar o fluxo de trabalho global do projeto.' },
-      { key: 'start_poker',   label: 'Permissões de Estimativa Colaborativa',  desc: 'Ter permissões para conduzir a estimativa colaborativa.' },
-      { key: 'edit_project',  label: 'Excluir Projeto',                         desc: 'Consegue excluir ou arquivar o projeto por inteiro.' },
+      { key: 'Criar Colunas',     label: 'Criar novas sprints',  desc: 'Modificar o fluxo de trabalho global do projeto.' },
+      { key: 'Editar Estrutura',  label: 'Editar estrutura',     desc: 'Ajustar configurações estruturais do projeto.' },
+      { key: 'Gerenciar Sprints', label: 'Gerenciar sprints',    desc: 'Iniciar e encerrar sprints do projeto.' },
     ],
   },
   {
@@ -50,9 +32,8 @@ const PERMISSION_GROUPS = [
     label: 'Gestão de Equipe',
     Icon: IconTeam,
     permissions: [
-      { key: 'add_member',          label: 'Convidar Novos Membros',   desc: 'Adicionar novos membros ao time de desenvolvimento.' },
-      { key: 'assign_card',         label: 'Atribuir Tarefas a Colegas', desc: 'Designar quem é responsável por cada demanda.' },
-      { key: 'change_member_role',  label: 'Alterar Níveis de Acesso',  desc: 'Modificar permissões de outros membros do projeto.' },
+      { key: 'Adicionar Membros', label: 'Convidar novos membros', desc: 'Adicionar novos membros ao time de desenvolvimento.' },
+      { key: 'Remover Membros',   label: 'Remover membros',        desc: 'Remover integrantes do projeto.' },
     ],
   },
 ]
@@ -198,6 +179,7 @@ export default function ViewPermissionsPage() {
   const { projectId } = useParams()
   const [membro,      setMembro]      = useState(null)
   const [projectName, setProjectName] = useState('este projeto')
+  const [permSet,     setPermSet]     = useState(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -205,10 +187,17 @@ export default function ViewPermissionsPage() {
     Promise.all([
       projetoService.listarMembros(projectId),
       projetoService.buscar(projectId).catch(() => null),
-    ]).then(([membrosData, proj]) => {
+    ]).then(async ([membrosData, proj]) => {
       const list = Array.isArray(membrosData) ? membrosData : []
-      setMembro(list.find((m) => m.email === user.email) ?? null)
+      const found = list.find((m) => m.email === user.email) ?? null
+      setMembro(found)
       if (proj?.nome) setProjectName(proj.nome)
+      if (found?.id) {
+        try {
+          const data = await projetoService.buscarPermissoesMembro(projectId, found.id)
+          setPermSet(new Set(Array.isArray(data?.permissoes) ? data.permissoes : []))
+        } catch { setPermSet(new Set()) }
+      }
     }).catch(() => {}).finally(() => setLoading(false))
   }, [projectId, user?.email])
 
@@ -217,8 +206,7 @@ export default function ViewPermissionsPage() {
     : membro?.cargo === 'Visualizador'
       ? 'VISUALIZADOR'
       : 'MEMBRO'
-  const perms       = PERMISSIONS[role] || PERMISSIONS.MEMBRO
-  const can         = (p) => perms.has(p)
+  const can         = (p) => permSet.has(p)
   const displayRole = ROLE_LABEL[role] ?? role
   const roleColor   = ROLE_COLOR[role] ?? '#475569'
   const noteText    = ROLE_NOTE[role] ?? ROLE_NOTE.MEMBRO

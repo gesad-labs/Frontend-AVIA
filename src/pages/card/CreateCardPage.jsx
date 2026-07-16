@@ -26,9 +26,11 @@ export default function CreateCardPage() {
   const [estimativa,  setEstimativa]  = useState('')
   const [status,      setStatus]      = useState(defaultStatus)
   const [tipo,        setTipo]        = useState('')
-  const [responsavelId, setResponsavelId] = useState('')
+  const [responsaveisIds, setResponsaveisIds] = useState(new Set())
   const [membros,     setMembros]     = useState([])
   const [projeto,     setProjeto]     = useState(null)
+  const [linkUrl,     setLinkUrl]     = useState('')
+  const [linkNome,    setLinkNome]    = useState('')
   const [saving,      setSaving]      = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [error,       setError]       = useState('')
@@ -49,16 +51,23 @@ export default function CreateCardPage() {
     if (!titulo.trim()) { setError('Título obrigatório'); return }
     setSaving(true); setError('')
     try {
-      await projetoService.criarTarefa(projectId, {
+      const nova = await projetoService.criarTarefa(projectId, {
         titulo:          titulo.trim(),
         descricao:       descricao.trim() || titulo.trim(),
         status,
         prioridade,
         estimativa:      estimativa !== '' ? Number(estimativa) : null,
         sprintId:        sprintId ? Number(sprintId) : null,
-        responsaveisIds: responsavelId ? [responsavelId] : [],
+        responsaveisIds: Array.from(responsaveisIds),
         tipo:            tipo || null,
       })
+      if (linkUrl.trim() && nova?.id) {
+        await projetoService.adicionarAnexo(projectId, nova.id, {
+          nome:        linkNome.trim() || linkUrl.trim(),
+          tipoArquivo: 'link',
+          url:         linkUrl.trim(),
+        }).catch(() => {})
+      }
       navigate(`/project/${projectId}/board`)
     } catch {
       setError('Erro ao criar card.')
@@ -112,13 +121,25 @@ export default function CreateCardPage() {
             {/* Metadata: Responsável · Prioridade · Estimativa */}
             <div className={styles.metadataGrid}>
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Responsável</label>
-                <select className={styles.select} value={responsavelId} onChange={e => setResponsavelId(e.target.value)}>
-                  <option value="">Selecione um membro</option>
+                <label className={styles.fieldLabel}>Responsáveis</label>
+                <div className={styles.checkList}>
                   {membros.map(m => (
-                    <option key={m.id} value={m.id}>{m.nome || m.email}</option>
+                    <label key={m.id} className={styles.checkItem}>
+                      <input
+                        type="checkbox"
+                        checked={responsaveisIds.has(m.id)}
+                        onChange={() => {
+                          setResponsaveisIds(prev => {
+                            const next = new Set(prev)
+                            next.has(m.id) ? next.delete(m.id) : next.add(m.id)
+                            return next
+                          })
+                        }}
+                      />
+                      <span>{m.nome || m.email}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className={styles.fieldGroup}>
@@ -161,16 +182,24 @@ export default function CreateCardPage() {
               </div>
             </div>
 
-            {/* Attachment area */}
-            <div className={styles.attachArea}>
-              <span className={styles.attachIcon}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-              </span>
-              <p className={styles.attachLabel}>Anexar Documentação</p>
-              <p className={styles.attachHint}>Arraste arquivos em PDF, PNG ou JPG aqui (Máx 20MB)</p>
+            {/* Link section */}
+            <div className={styles.linkSection}>
+              <label className={styles.fieldLabel}>Anexar Link (opcional)</label>
+              <div className={styles.linkRow}>
+                <input
+                  className={styles.input}
+                  value={linkUrl}
+                  onChange={e => setLinkUrl(e.target.value)}
+                  placeholder="https://..."
+                  type="url"
+                />
+                <input
+                  className={styles.input}
+                  value={linkNome}
+                  onChange={e => setLinkNome(e.target.value)}
+                  placeholder="Nome do link (opcional)"
+                />
+              </div>
             </div>
 
             {/* Ações */}

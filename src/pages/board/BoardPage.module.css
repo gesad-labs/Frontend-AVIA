@@ -514,6 +514,40 @@
   flex-wrap: wrap;
 }
 
+.cardImpedimentoToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #b91c1c;
+  cursor: pointer;
+  accent-color: #b91c1c;
+  user-select: none;
+  margin-bottom: 2px;
+}
+.cardImpedimentoToggle input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.impedimentoCheckLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #b91c1c;
+  accent-color: #b91c1c;
+  margin: 4px 0;
+}
+.impedimentoCheckLabel input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
 .cardTypeTag {
   display: inline-flex;
   align-items: center;
@@ -526,12 +560,30 @@
   white-space: nowrap;
 }
 
-.impedimentoDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ef4444;
-  flex-shrink: 0;
+.cardImpedimentoTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.cardStatusTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .cardTitle {

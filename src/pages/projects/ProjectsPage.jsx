@@ -25,6 +25,13 @@ const MoreIcon = () => (
     <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
   </svg>
 )
+const ExitIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+)
 const ChevronLeftIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="15 18 9 12 15 6" />
@@ -78,11 +85,7 @@ const RefreshIcon = () => (
     <path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" />
   </svg>
 )
-const ArchiveIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="5" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><line x1="10" y1="13" x2="14" y2="13" />
-  </svg>
-)
+
 const LinkIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -107,11 +110,7 @@ const ListIcon = () => (
     <circle cx="3" cy="6" r="1" fill="currentColor" /><circle cx="3" cy="12" r="1" fill="currentColor" /><circle cx="3" cy="18" r="1" fill="currentColor" />
   </svg>
 )
-const ExitIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-)
+
 const FolderOpenIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -419,7 +418,7 @@ const STATUS_OPTIONS = [
   { label: 'Concluído',    Icon: CheckCircleIcon },
 ]
 
-function CardMenu({ projetoId, projetoNome, onClose, onStatusChange }) {
+function CardMenu({ projetoId, projetoNome, onClose, onStatusChange, onSair }) {
   const navigate = useNavigate()
   const [showStatus, setShowStatus] = useState(false)
   const ref = useRef(null)
@@ -442,10 +441,6 @@ function CardMenu({ projetoId, projetoNome, onClose, onStatusChange }) {
       <button className={styles.contextItem} onClick={() => { navigate(`/project/${projetoId}`); onClose() }}>
         <FolderOpenIcon /> Abrir projeto
       </button>
-      <button className={styles.contextItem} onClick={() => { alert('Em desenvolvimento'); onClose() }}>
-        <ExitIcon /> Sair do projeto
-      </button>
-
       <div
         className={`${styles.contextItem} ${styles.contextItemSub} ${showStatus ? styles.contextItemSubOpen : ''}`}
         onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
@@ -471,21 +466,24 @@ function CardMenu({ projetoId, projetoNome, onClose, onStatusChange }) {
 
       <div className={styles.contextDivider} />
 
-      <button className={styles.contextItem} onClick={() => { alert('Em desenvolvimento'); onClose() }}>
-        <ArchiveIcon /> Arquivar projeto
-      </button>
       <button className={styles.contextItem} onClick={copyLink}>
         <LinkIcon /> Copiar link
       </button>
       <button className={styles.contextItem} onClick={() => { navigate(`/project/${projetoId}/settings`); onClose() }}>
         <SettingsIcon /> Ir para configurações
       </button>
+
+      <div className={styles.contextDivider} />
+
+      <button className={`${styles.contextItem} ${styles.contextItemDanger}`} onClick={() => { onSair(projetoId); onClose() }}>
+        <ExitIcon /> Sair do projeto
+      </button>
     </div>
   )
 }
 
 /* ── Project List Row ── */
-function ProjectListRow({ projeto, onStatusChange }) {
+function ProjectListRow({ projeto, onStatusChange, onSair }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg } = getTheme(projeto.id)
@@ -524,6 +522,7 @@ function ProjectListRow({ projeto, onStatusChange }) {
             projetoNome={projeto.nome}
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
+            onSair={onSair}
           />
         )}
       </div>
@@ -533,7 +532,7 @@ function ProjectListRow({ projeto, onStatusChange }) {
 }
 
 /* ── Project Card ── */
-function ProjectCard({ projeto, onStatusChange }) {
+function ProjectCard({ projeto, onStatusChange, onSair }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg, Icon } = getTheme(projeto.id)
@@ -562,6 +561,7 @@ function ProjectCard({ projeto, onStatusChange }) {
             projetoNome={projeto.nome}
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
+            onSair={onSair}
           />
         )}
       </div>
@@ -660,6 +660,16 @@ export default function ProjectsPage() {
     setShowModal(false)
   }
 
+  async function handleSair(id) {
+    if (!window.confirm('Tem certeza que deseja sair deste projeto?')) return
+    try {
+      await projetoService.sairDoProjeto(id)
+      setProjetos(prev => prev.filter(p => p.id !== id))
+    } catch (e) {
+      alert(e?.body?.mensagem || 'Erro ao sair do projeto.')
+    }
+  }
+
   function handleStatusChange(id, label) {
     const map = { 'Em andamento': 'EM ANDAMENTO', 'Planejamento': 'PLANEJAMENTO', 'Concluído': 'CONCLUÍDO' }
     const newStatus = map[label]
@@ -721,13 +731,13 @@ export default function ProjectsPage() {
       ) : view === 'grid' ? (
         <div className={styles.grid}>
           {paginated.map(p => (
-            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} />
+            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
           ))}
         </div>
       ) : (
         <div className={styles.listView}>
           {paginated.map(p => (
-            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} />
+            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
           ))}
         </div>
       )}

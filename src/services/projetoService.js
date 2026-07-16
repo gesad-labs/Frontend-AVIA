@@ -12,6 +12,7 @@ export const projetoService = {
   listarMembros:    (id)            => api.get(`/projetos/${id}/membros`),
   adicionarMembro:  (id, data)      => api.post(`/projetos/${id}/membros`, data),
   removerMembro:    (id, email)     => api.delete(`/projetos/${id}/membros`, { emailMembro: email }),
+  sairDoProjeto:    (id)            => api.delete(`/projetos/${id}/sair`),
   atualizarMembro:  (id, uid, data) => api.patch(`/projetos/${id}/membros/${uid}`, data),
 
   // Sprints

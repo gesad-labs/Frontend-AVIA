@@ -25,6 +25,8 @@ export default function EditCardPage() {
   const [responsavelId, setResponsavelId] = useState('')
   const [membros,      setMembros]     = useState([])
   const [projeto,      setProjeto]     = useState(null)
+  const [linkUrl,      setLinkUrl]     = useState('')
+  const [linkNome,     setLinkNome]    = useState('')
   const [saving,       setSaving]      = useState(false)
   const [loadingData,  setLoadingData] = useState(true)
   const [error,        setError]       = useState('')
@@ -64,6 +66,13 @@ export default function EditCardPage() {
         responsaveisIds: responsavelId ? [responsavelId] : [],
         tipo:            tipo || null,
       })
+      if (linkUrl.trim()) {
+        await projetoService.adicionarAnexo(projectId, tarefaId, {
+          nome:        linkNome.trim() || linkUrl.trim(),
+          tipoArquivo: 'link',
+          url:         linkUrl.trim(),
+        }).catch(() => {})
+      }
       navigate(`/project/${projectId}/board`)
     } catch {
       setError('Erro ao salvar.')
@@ -166,16 +175,24 @@ export default function EditCardPage() {
               </div>
             </div>
 
-            {/* Attachment area */}
-            <div className={styles.attachArea}>
-              <span className={styles.attachIcon}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-              </span>
-              <p className={styles.attachLabel}>Anexar Documentação</p>
-              <p className={styles.attachHint}>Arraste arquivos em PDF, PNG ou JPG aqui (Máx 20MB)</p>
+            {/* Link section */}
+            <div className={styles.linkSection}>
+              <label className={styles.fieldLabel}>Anexar Link (opcional)</label>
+              <div className={styles.linkRow}>
+                <input
+                  className={styles.input}
+                  value={linkUrl}
+                  onChange={e => setLinkUrl(e.target.value)}
+                  placeholder="https://..."
+                  type="url"
+                />
+                <input
+                  className={styles.input}
+                  value={linkNome}
+                  onChange={e => setLinkNome(e.target.value)}
+                  placeholder="Nome do link (opcional)"
+                />
+              </div>
             </div>
 
             {/* Ações */}

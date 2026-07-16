@@ -380,10 +380,14 @@ function MultiSelectDropdown({ membros, selected, onToggle, placeholder }) {
 }
 
 /* ── Add task form (inline) ── */
+const TIPO_OPTIONS_BACKLOG = ['BUG', 'MELHORIA', 'TAREFA']
+
 function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
   const [titulo,        setTitulo]        = useState('')
+  const [descricao,     setDescricao]     = useState('')
   const [estimativa,    setEstimativa]    = useState('')
   const [prioridade,    setPrioridade]    = useState('')
+  const [tipo,          setTipo]          = useState('')
   const [responsaveisIds, setResponsaveisIds] = useState(new Set())
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
@@ -403,14 +407,15 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
     try {
       await projetoService.criarTarefa(projectId, {
         titulo:          titulo.trim(),
-        descricao:       titulo.trim(),
+        descricao:       descricao.trim() || titulo.trim(),
         status:          'A_FAZER',
         estimativa:      parseInt(estimativa, 10) || null,
         prioridade:      prioridade || null,
+        tipo:            tipo || null,
         sprintId:        sprintId ?? null,
         responsaveisIds: Array.from(responsaveisIds),
       })
-      setTitulo(''); setEstimativa(''); setPrioridade(''); setResponsaveisIds(new Set())
+      setTitulo(''); setDescricao(''); setEstimativa(''); setPrioridade(''); setTipo(''); setResponsaveisIds(new Set())
       onAdded()
     } catch {
       setError('Erro ao criar card.')
@@ -430,6 +435,10 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
           <option value="MEDIA">Média</option>
           <option value="BAIXA">Baixa</option>
         </select>
+        <select className={styles.addSelect} value={tipo} onChange={e => setTipo(e.target.value)}>
+          <option value="">Tipo</option>
+          {TIPO_OPTIONS_BACKLOG.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
         {membros.length > 0 && (
           <MultiSelectDropdown
             membros={membros}
@@ -442,6 +451,13 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
           <PlusIcon />{loading ? '...' : 'Adicionar'}
         </button>
       </div>
+      <textarea
+        className={styles.addDescInput}
+        placeholder="Descrição (opcional)..."
+        value={descricao}
+        onChange={e => setDescricao(e.target.value)}
+        rows={2}
+      />
       {error && <p className={styles.addError}>{error}</p>}
     </form>
   )

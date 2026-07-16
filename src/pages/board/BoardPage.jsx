@@ -41,7 +41,20 @@ const PRIORIDADE_STYLE = {
   BAIXA: { bg: '#f0fdf4', color: '#166534' },
 }
 
+const STATUS_COLORS = {
+  A_FAZER:   { bg: '#f1f5f9', color: '#64748b', label: 'A Fazer' },
+  FAZENDO:   { bg: '#dbeafe', color: '#1d4ed8', label: 'Fazendo' },
+  TESTE:     { bg: '#fef9c3', color: '#a16207', label: 'Em Teste' },
+  CONCLUIDA: { bg: '#dcfce7', color: '#15803d', label: 'Concluída' },
+}
+
 const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
+const STATUS_OPTIONS_BOARD = [
+  { value: 'A_FAZER',   label: 'A Fazer' },
+  { value: 'FAZENDO',   label: 'Fazendo' },
+  { value: 'TESTE',     label: 'Em Teste' },
+  { value: 'CONCLUIDA', label: 'Concluída' },
+]
 
 /* ── Helpers ── */
 const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
@@ -225,26 +238,45 @@ function CardNotifBell({ notifs }) {
 }
 
 /* ── Type tag ── */
-function CardTypeTag({ tipo, prioridade }) {
-  if (tipo) {
-    const key = tipo.toUpperCase()
-    const cfg = TIPO_COLORS[key] ?? { bg: '#e2e8f0', color: '#475569' }
-    return (
-      <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
-        {tipo.toUpperCase()}
-      </span>
-    )
-  }
-  if (prioridade) {
-    const key = prioridade.toUpperCase()
-    const cfg = PRIORIDADE_STYLE[key] ?? PRIORIDADE_STYLE.MEDIA
-    return (
-      <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
-        {PRIORIDADE_LABEL[key] ?? prioridade}
-      </span>
-    )
-  }
-  return null
+function CardTypeTag({ tipo }) {
+  if (!tipo) return null
+  const key = tipo.toUpperCase()
+  const cfg = TIPO_COLORS[key] ?? { bg: '#e2e8f0', color: '#475569' }
+  return (
+    <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
+      {tipo.toUpperCase()}
+    </span>
+  )
+}
+
+function CardPrioridadeTag({ prioridade }) {
+  if (!prioridade) return null
+  const key = prioridade.toUpperCase()
+  const cfg = PRIORIDADE_STYLE[key] ?? PRIORIDADE_STYLE.MEDIA
+  return (
+    <span className={styles.cardTypeTag} style={{ background: cfg.bg, color: cfg.color }}>
+      {PRIORIDADE_LABEL[key] ?? prioridade}
+    </span>
+  )
+}
+
+function CardImpedimentoTag() {
+  return (
+    <span className={styles.cardImpedimentoTag}>
+      <IconBlock /> Impedimento
+    </span>
+  )
+}
+
+function CardStatusTag({ status }) {
+  if (!status) return null
+  const cfg = STATUS_COLORS[status]
+  if (!cfg) return null
+  return (
+    <span className={styles.cardStatusTag} style={{ background: cfg.bg, color: cfg.color }}>
+      {cfg.label}
+    </span>
+  )
 }
 
 /* ── Filter Panel ── */
@@ -353,6 +385,8 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
   const [estimativa, setEstimativa] = useState(tarefa.estimativa ?? '')
   const [prioridade, setPrioridade] = useState(tarefa.prioridade ?? 'MEDIA')
   const [tipo, setTipo]             = useState(tarefa.tipo ?? '')
+  const [status, setStatus]         = useState(tarefa.status ?? 'A_FAZER')
+  const [impedimento, setImpedimento] = useState(!!tarefa.impedimento)
   const [responsaveisIds, setResponsaveisIds] = useState(
     new Set(tarefa.responsaveis?.map(r => r.id) ?? [])
   )
@@ -379,7 +413,11 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
         prioridade,
         responsaveisIds: Array.from(responsaveisIds),
         tipo:            tipo.trim() || null,
+        impedimento,
       })
+      if (status !== tarefa.status) {
+        await projetoService.atualizarStatus(projectId, tarefa.id, { status })
+      }
       onSaved()
     } catch {
       setError('Erro ao salvar.')
@@ -421,10 +459,18 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
               </select>
             </label>
           </div>
-          <label className={styles.formLabel}>
-            Estimativa (pts)
-            <input className={styles.formInput} type="number" min="0" value={estimativa} onChange={e => setEstimativa(e.target.value)} placeholder="—" />
-          </label>
+          <div className={styles.formRow}>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Estimativa (pts)
+              <input className={styles.formInput} type="number" min="0" value={estimativa} onChange={e => setEstimativa(e.target.value)} placeholder="—" />
+            </label>
+            <label className={styles.formLabel} style={{ flex: 1 }}>
+              Status
+              <select className={styles.formInput} value={status} onChange={e => setStatus(e.target.value)}>
+                {STATUS_OPTIONS_BOARD.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </label>
+          </div>
           {membros.length > 0 && (
             <label className={styles.formLabel}>
               Responsáveis
@@ -438,6 +484,11 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
               </div>
             </label>
           )}
+          <label className={styles.impedimentoCheckLabel}>
+            <input type="checkbox" checked={impedimento} onChange={e => setImpedimento(e.target.checked)} />
+            <span>Impedimento (bloqueado)</span>
+          </label>
+
           <div className={styles.modalActions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancelar</button>
             <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
@@ -590,8 +641,16 @@ function CardMenu({ tarefa, onDetail, onEdit, onDelete, canEdit, canDelete }) {
 }
 
 /* ── Task card ── */
-function TaskCard({ tarefa, notifs = [], onDetail, onEdit, onDelete, compact, altBg, canEdit, canDelete }) {
+function TaskCard({ tarefa, projectId, notifs = [], onDetail, onEdit, onDelete, onRefresh, compact, altBg, canEdit, canDelete }) {
   const [dragging, setDragging] = useState(false)
+
+  async function handleToggleImpedimento(e) {
+    e.stopPropagation()
+    try {
+      await projetoService.editarTarefa(projectId, tarefa.id, { impedimento: !tarefa.impedimento })
+      onRefresh?.()
+    } catch { /* silencioso */ }
+  }
 
   function handleDragStart(e) {
     setDragging(true)
@@ -652,11 +711,21 @@ function TaskCard({ tarefa, notifs = [], onDetail, onEdit, onDelete, compact, al
         </div>
       </div>
 
-      {/* Tag + impedimento dot */}
+      {/* Tags side-by-side */}
       <div className={styles.cardTagRow}>
-        <CardTypeTag tipo={tarefa.tipo} prioridade={tarefa.prioridade} />
-        {tarefa.impedimento && <span className={styles.impedimentoDot} title="Impedimento" />}
+        <CardStatusTag status={tarefa.status} />
+        <CardTypeTag tipo={tarefa.tipo} />
+        <CardPrioridadeTag prioridade={tarefa.prioridade} />
+        {tarefa.impedimento && <CardImpedimentoTag />}
       </div>
+
+      {/* Impedimento toggle */}
+      {canEdit && (
+        <label className={styles.cardImpedimentoToggle} onClick={e => e.stopPropagation()}>
+          <input type="checkbox" checked={!!tarefa.impedimento} onChange={handleToggleImpedimento} />
+          <span>Impedimento</span>
+        </label>
+      )}
 
       {/* Title */}
       <p className={styles.cardTitle}>{tarefa.titulo}</p>
@@ -677,11 +746,6 @@ function TaskCard({ tarefa, notifs = [], onDetail, onEdit, onDelete, compact, al
           {hasSubtarefas && (
             <span className={styles.cardMetaChip} title={`${tarefa.subtarefasCount} sub-tarefa(s)`}>
               <IconCheckSquare /> {tarefa.subtarefasCount}
-            </span>
-          )}
-          {tarefa.impedimento && (
-            <span className={styles.impedimentoBadge}>
-              <IconBlock /> Impedimento
             </span>
           )}
         </div>
@@ -769,6 +833,7 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onDetai
             onDetail={() => onDetail(t)}
             onEdit={() => onEdit(t)}
             onDelete={() => onDelete(t)}
+            onRefresh={onRefresh}
             canEdit={canEdit}
             canDelete={canDelete}
           />
@@ -798,14 +863,15 @@ export default function BoardPage() {
     return map
   }, [notificacoes])
 
-  const [sprint, setSprint]           = useState(null)
-  const [tarefas, setTarefas]         = useState([])
-  const [projeto, setProjeto]         = useState(null)
-  const [membros, setMembros]         = useState([])
-  const [currentUser, setCurrentUser] = useState(null)
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState('')
-  const [noSprint, setNoSprint]       = useState(false)
+  const [sprint, setSprint]               = useState(null)
+  const [tarefas, setTarefas]             = useState([])
+  const [projeto, setProjeto]             = useState(null)
+  const [membros, setMembros]             = useState([])
+  const [currentUser, setCurrentUser]     = useState(null)
+  const [myPermissions, setMyPermissions] = useState(new Set())
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState('')
+  const [noSprint, setNoSprint]           = useState(false)
 
   const [editingCard, setEditingCard]           = useState(null)
   const [addingCardStatus, setAddingCardStatus] = useState(null)
@@ -852,7 +918,17 @@ export default function BoardPage() {
       ])
       setCurrentUser(userData)
       setProjeto(proj)
-      setMembros(Array.isArray(mems) ? mems : [])
+      const memList = Array.isArray(mems) ? mems : []
+      setMembros(memList)
+
+      if (userData) {
+        projetoService.buscarPermissoesMembro(projectId, userData.id)
+          .then(data => {
+            const perms = Array.isArray(data?.permissoes) ? data.permissoes : []
+            setMyPermissions(new Set(perms))
+          })
+          .catch(() => {})
+      }
 
       const active = Array.isArray(sprints)
         ? sprints.find(s => s.status === 'EM_ANDAMENTO')
@@ -874,7 +950,11 @@ export default function BoardPage() {
 
   async function handleEncerrarSprint() {
     if (!sprint) return
-    if (!window.confirm(`Encerrar "${sprint.nome}"? Tarefas não concluídas voltarão ao backlog.`)) return
+    const incompletos = tarefas.filter(t => t.status !== 'CONCLUIDA').length
+    const msg = incompletos > 0
+      ? `Encerrar "${sprint.nome}"?\n\n${incompletos} card${incompletos > 1 ? 's' : ''} não concluído${incompletos > 1 ? 's' : ''} ${incompletos > 1 ? 'serão movidos' : 'será movido'} de volta ao backlog.\n\nCards concluídos também voltam ao backlog marcados como concluídos.`
+      : `Encerrar "${sprint.nome}"?\n\nTodos os ${tarefas.length} cards estão concluídos e serão movidos para o backlog como concluídos.`
+    if (!window.confirm(msg)) return
     setClosingSprint(true)
     try {
       await projetoService.editarSprint(projectId, sprint.id, { status: 'CONCLUIDA' })
@@ -949,7 +1029,13 @@ export default function BoardPage() {
 
   const myMembro = membros.find(m => m.id === currentUser?.id)
   const isGerente = myMembro?.papel === 'gerente'
-  const canCreateTarefas = myMembro?.papel !== 'visualizador'
+
+  const hasCustomPerms = myPermissions.size > 0
+  const isMembro = myMembro?.papel === 'membro'
+
+  const canCreateTarefas = isGerente || (hasCustomPerms ? myPermissions.has('Criar Tarefas') : isMembro)
+  const canEditTarefas   = isGerente || (hasCustomPerms ? myPermissions.has('Editar Tarefas') : isMembro)
+  const canDeleteTarefas = isGerente || (hasCustomPerms && myPermissions.has('Excluir Tarefas'))
 
   const tasksByStatus = Object.fromEntries(
     COLUMNS.map(col => [col.key, applySort(applyFilters(tarefas.filter(t => t.status === col.key)))])
@@ -1040,8 +1126,8 @@ export default function BoardPage() {
               onEdit={t => setEditingCard(t)}
               onDelete={handleDelete}
               canCreateTarefas={canCreateTarefas}
-              canEdit={canCreateTarefas}
-              canDelete={isGerente}
+              canEdit={canEditTarefas}
+              canDelete={canDeleteTarefas}
               notifsByTarefaId={cardNotifMap}
             />
           ))}
