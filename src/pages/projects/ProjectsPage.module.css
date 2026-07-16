@@ -784,6 +784,13 @@
   background: var(--color-surface);
 }
 
+.contextItemDanger {
+  color: var(--color-danger, #dc2626);
+}
+.contextItemDanger:hover {
+  background: #fee2e2;
+}
+
 .contextItemSub {
   justify-content: space-between;
   position: relative;

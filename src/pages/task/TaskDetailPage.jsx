@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
@@ -7,9 +8,9 @@ import styles from './TaskDetailPage.module.css'
 /* ─── Constants ─────────────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
   { value: 'A_FAZER',   label: 'A Fazer' },
-  { value: 'FAZENDO',   label: 'Em Progresso' },
-  { value: 'TESTE',     label: 'Em Revisão' },
-  { value: 'CONCLUIDA', label: 'Concluído' },
+  { value: 'FAZENDO',   label: 'Fazendo' },
+  { value: 'TESTE',     label: 'Em Teste' },
+  { value: 'CONCLUIDA', label: 'Concluída' },
 ]
 const PRIORIDADE_OPTIONS = [
   { value: 'BAIXA', label: 'Baixa' },
@@ -37,6 +38,20 @@ function avatarColor(str = '') {
 function initials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?'
 }
+function renderCommentText(text, membros = []) {
+  if (!text) return text
+  const names = membros.map(m => m.nome).filter(Boolean)
+  if (!names.length) return text
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`(@(?:${escaped.join('|')}))`, 'g')
+  const parts = text.split(re)
+  return parts.map((part, i) =>
+    names.some(n => part === `@${n}`)
+      ? <strong key={i}>{part}</strong>
+      : part
+  )
+}
+
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -115,21 +130,40 @@ const IconSearch = () => (
 /* ─── Small dropdown helper ──────────────────────────────────────────── */
 function SideDropdown({ options, value, onChange, renderTrigger }) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState(null)
   const ref = useRef(null)
+  const triggerRef = useRef(null)
   useEffect(() => {
     if (!open) return
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const h = (e) => {
+      if (ref.current && ref.current.contains(e.target)) return
+      if (triggerRef.current && triggerRef.current.contains(e.target)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [open])
+
+  function handleToggle() {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setMenuPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+    setOpen(o => !o)
+  }
+
   return (
-    <div className={styles.dropWrap} ref={ref}>
-      <button type="button" className={styles.dropTrigger} onClick={() => setOpen(o => !o)}>
+    <div className={styles.dropWrap}>
+      <button type="button" ref={triggerRef} className={styles.dropTrigger} onClick={handleToggle}>
         {renderTrigger(value)}
         <span className={styles.dropArrow}><IconChevron open={open} /></span>
       </button>
-      {open && (
-        <div className={styles.dropMenu}>
+      {open && menuPos && createPortal(
+        <div
+          ref={ref}
+          className={styles.dropMenu}
+          style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, width: menuPos.width, zIndex: 9999 }}
+        >
           {options.map(opt => (
             <button key={opt.value} type="button" className={`${styles.dropOpt} ${opt.value === value ? styles.dropOptActive : ''}`}
               onClick={() => { onChange(opt.value); setOpen(false) }}>
@@ -137,7 +171,8 @@ function SideDropdown({ options, value, onChange, renderTrigger }) {
               {opt.value === value && <span style={{ marginLeft: 'auto' }}><IconCheck /></span>}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -359,10 +394,18 @@ export default function TaskDetailPage() {
     return updated
   }
 
-  async function patchStatus(status) {
+  async function patchStatus(val) {
     setSavingField('status')
     try {
-      const updated = await projetoService.atualizarStatus(projectId, taskId, { status })
+      const updated = await projetoService.atualizarStatus(projectId, taskId, { status: val })
+      setTarefa(updated)
+    } finally { setSavingField(null) }
+  }
+
+  async function toggleImpedimento() {
+    setSavingField('impedimento')
+    try {
+      const updated = await projetoService.editarTarefa(projectId, taskId, { impedimento: !tarefa.impedimento })
       setTarefa(updated)
     } finally { setSavingField(null) }
   }
@@ -579,12 +622,11 @@ export default function TaskDetailPage() {
                     }
                   </div>
                   <div className={styles.anexoInfo}>
-                    <span className={styles.anexoNome}>{a.nome}</span>
-                    <span className={styles.anexoTipo}>{a.tipoArquivo}</span>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.anexoNomeLink}>
+                      {a.nome}
+                    </a>
+                    {a.url && <span className={styles.anexoUrl}>{a.url}</span>}
                   </div>
-                  <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.anexoAction} title="Baixar">
-                    <IconDownload />
-                  </a>
                   <button className={styles.anexoAction} title="Remover" onClick={() => removeAnexo(a.id)}>
                     <IconX />
                   </button>
@@ -659,7 +701,7 @@ export default function TaskDetailPage() {
                     <span className={styles.commentAuthor}>{c.autorNome || 'Usuário'}</span>
                     <span className={styles.commentTime}>{fmtRelative(c.criadoEm)}</span>
                   </div>
-                  <p className={styles.commentText}>{c.descricao}</p>
+                  <p className={styles.commentText}>{renderCommentText(c.descricao, membros)}</p>
                 </div>
               </div>
             ))}
@@ -690,6 +732,20 @@ export default function TaskDetailPage() {
               )
             }}
           />
+        </div>
+
+        {/* Impedimento */}
+        <div className={styles.sideSection}>
+          <p className={styles.sideLabel}>IMPEDIMENTO</p>
+          <label className={styles.impedimentoCheck}>
+            <input
+              type="checkbox"
+              checked={!!tarefa.impedimento}
+              onChange={toggleImpedimento}
+              disabled={savingField === 'impedimento'}
+            />
+            <span>{tarefa.impedimento ? 'Bloqueado' : 'Sem impedimento'}</span>
+          </label>
         </div>
 
         {/* Responsáveis */}

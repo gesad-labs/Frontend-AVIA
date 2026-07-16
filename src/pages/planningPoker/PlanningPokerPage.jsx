@@ -181,7 +181,12 @@ export default function PlanningPokerPage() {
 
   function handleVotar() {
     if (selectedCard === null || !sessao) return
-    sendWS(`/app/planning-poker/${sessao.id}/votar`, { valor: selectedCard })
+    const client = stompRef.current
+    if (!client?.connected) {
+      alert('Conexão não estabelecida. Aguarde e tente novamente.')
+      return
+    }
+    client.publish({ destination: `/app/planning-poker/${sessao.id}/votar`, body: JSON.stringify({ valor: selectedCard }) })
     setSelectedCard(null)
   }
 
