@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { api } from '../../services/api'
+import { api, getErrorMessage } from '../../services/api'
+import { useToast } from '../../hooks/useToast'
 import styles from './ResetPasswordPage.module.css'
 
 const EyeIcon = ({ open }) => open ? (
@@ -23,6 +24,7 @@ const ShieldIcon = () => (
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [searchParams] = useSearchParams()
   const [form, setForm] = useState({ password: '', confirm: '' })
   const [show, setShow] = useState({ password: false, confirm: false })
@@ -59,9 +61,10 @@ export default function ResetPasswordPage() {
     try {
       // Backend: { token: string, novaSenha: string } → 204
       await api.post('/auth/redefinicao-senha', { token, novaSenha: form.password })
+      toast.success('Senha redefinida com sucesso. Faça login com a nova senha.')
       navigate('/login')
     } catch (err) {
-      setError(err.body?.message ?? 'Token inválido ou expirado. Solicite um novo link.')
+      setError(getErrorMessage(err, 'Token inválido ou expirado. Solicite um novo link.'))
     } finally {
       setLoading(false)
     }

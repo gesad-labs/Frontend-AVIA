@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { useToast } from '../../hooks/useToast'
 import styles from './SignupPage.module.css'
 
 const EyeOpen = () => (
@@ -21,6 +22,7 @@ const EyeClosed = () => (
 export default function SignupPage() {
   const navigate = useNavigate()
   const { register: registerUser, authLoading } = useAuth()
+  const toast = useToast()
 
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
@@ -42,6 +44,7 @@ export default function SignupPage() {
     setError('')
     const result = await registerUser(form.name, form.email, form.password)
     if (result.success) {
+      toast.success('Conta criada com sucesso! Faça login para continuar.')
       navigate('/login')
     } else {
       const err = result.errors

@@ -1,4 +1,24 @@
-# React + Vite
+# AVIA — Frontend
+
+SPA em React 19 + Vite que consome a API Spring Boot do AVIA.
+
+## Como rodar
+
+1. `npm install`
+2. Suba o backend (Spring Boot) em `http://localhost:8080`
+3. `npm run dev` → http://localhost:5173
+
+## Configuração
+
+A URL da API vem de `VITE_API_URL`, definida no arquivo `.env` (já versionado com o padrão local).
+
+- **Backend em outra porta/máquina (só na sua):** crie `.env.local` com `VITE_API_URL=http://...` — o git ignora esse arquivo.
+- **Deploy:** defina `VITE_API_URL` no ambiente do build. O valor é embutido no bundle, então não coloque segredos em variáveis `VITE_*`.
+- Depois de mudar qualquer `.env`, reinicie o `npm run dev`.
+
+---
+
+## Template Vite (referência)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
