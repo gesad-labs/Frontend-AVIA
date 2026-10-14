@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
+import LeaveProjectModal from '../../components/project/LeaveProjectModal'
 import styles from './ProjectsPage.module.css'
 
 /* ── Icons ── */
@@ -146,6 +147,13 @@ const STATUS_LS_KEY = 'avia_project_statuses'
 function loadSavedStatuses() {
   try { return JSON.parse(localStorage.getItem(STATUS_LS_KEY) || '{}') }
   catch { return {} }
+}
+function removeSavedStatus(id) {
+  try {
+    const saved = loadSavedStatuses()
+    delete saved[String(id)]
+    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
+  } catch { /* ignore quota/parse errors */ }
 }
 function saveStatus(id, status) {
   try {
@@ -626,6 +634,7 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [view, setView] = useState('grid')
+  const [leaving, setLeaving] = useState(null) // { id, nome } do projeto que o usuário quer deixar
 
   const fetchProjetos = useCallback(async () => {
     setLoading(true); setError('')
@@ -660,14 +669,17 @@ export default function ProjectsPage() {
     setShowModal(false)
   }
 
-  async function handleSair(id) {
-    if (!window.confirm('Tem certeza que deseja sair deste projeto?')) return
-    try {
-      await projetoService.sairDoProjeto(id)
-      setProjetos(prev => prev.filter(p => p.id !== id))
-    } catch (e) {
-      alert(e?.body?.mensagem || 'Erro ao sair do projeto.')
-    }
+  // US012 — abre o modal; a regra de gerente único é tratada dentro dele.
+  function handleSair(id) {
+    const projeto = projetos.find(p => p.id === id)
+    setLeaving({ id, nome: projeto?.nome ?? 'este projeto' })
+  }
+
+  // Backend já removeu o vínculo: o projeto some da lista na hora.
+  function handleLeft() {
+    setProjetos(prev => prev.filter(p => p.id !== leaving.id))
+    removeSavedStatus(leaving.id)
+    setLeaving(null)
   }
 
   function handleStatusChange(id, label) {
@@ -746,6 +758,15 @@ export default function ProjectsPage() {
 
       {showModal && (
         <NovoProjetoModal onClose={() => setShowModal(false)} onSuccess={handleNewProject} />
+      )}
+
+      {leaving && (
+        <LeaveProjectModal
+          projectId={leaving.id}
+          projectName={leaving.nome}
+          onClose={() => setLeaving(null)}
+          onLeft={handleLeft}
+        />
       )}
     </div>
   )
