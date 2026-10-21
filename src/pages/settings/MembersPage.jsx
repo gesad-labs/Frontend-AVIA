@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
 import LeaveProjectModal from '../../components/project/LeaveProjectModal'
-import { isGerente as isMembroGerente } from '../../utils/membros'
+import { isGerente as isMembroGerente, temCargoGerente } from '../../utils/membros'
 import styles from './MembersPage.module.css'
 
 /* ── Icons ── */
@@ -453,7 +453,8 @@ export default function MembersPage() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          {myMembro && (
+          {/* Só gerente pode sair; membro comum é removido por um gerente. */}
+          {temCargoGerente(myMembro) && (
             <button className={styles.leaveBtn} onClick={() => setShowLeave(true)}>
               <ExitIcon /> Sair do projeto
             </button>

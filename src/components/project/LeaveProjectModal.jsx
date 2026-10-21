@@ -1,26 +1,22 @@
 import { useEffect, useState } from 'react'
 import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
-import { isGerente } from '../../utils/membros'
+import { temCargoGerente } from '../../utils/membros'
+import { getErrorMessage } from '../../utils/errors'
 import styles from './LeaveProjectModal.module.css'
 
-/* ── Helpers ─────────────────────────────────────────────────────── */
-
-function getErrorMessage(err, fallback) {
-  return err?.body?.erro || err?.body?.mensagem || err?.body?.message || fallback
+function mensagemDeErro(err, etapa, promovido) {
+  let msg
+  if (err?.status === 403) {
+    msg = etapa === 'promover'
+      ? 'Não foi possível transferir a gerência: seu usuário não tem permissão para essa ação.'
+      : 'Você não tem permissão para sair deste projeto. Peça a um gerente para remover você.'
+  } else {
+    msg = getErrorMessage(err, 'Erro ao sair do projeto. Tente novamente.')
+  }
+  return promovido ? `${msg} (O novo gerente já foi definido; você pode tentar sair novamente.)` : msg
 }
 
-/**
- * US012 — Auto remoção do projeto.
- *
- * Fluxo:
- *  1. Carrega os membros para descobrir o papel do usuário logado.
- *  2. Não é gerente, ou há outro gerente  → confirmação simples.
- *  3. É o ÚNICO gerente                   → exige escolher um sucessor.
- *     Ordem das chamadas: promover sucessor → sair. Se a 2ª falhar, o
- *     projeto fica com 2 gerentes (nunca com 0).
- *  4. Só existe o próprio usuário no projeto → bloqueia a saída.
- */
 export default function LeaveProjectModal({ projectId, projectName, onClose, onLeft }) {
   const { user } = useAuth()
   const [membros, setMembros]     = useState([])
@@ -41,27 +37,32 @@ export default function LeaveProjectModal({ projectId, projectName, onClose, onL
 
   const me = membros.find(m => m.email?.toLowerCase() === user?.email?.toLowerCase())
   const outros = membros.filter(m => m.id !== me?.id)
-  const souGerente = isGerente(me)
-  const outrosGerentes = outros.filter(isGerente)
+  const souGerente = temCargoGerente(me)
+  const outrosGerentes = outros.filter(temCargoGerente)
   const precisaSucessor = souGerente && outrosGerentes.length === 0
   const soEu = Boolean(me) && outros.length === 0
+  const naoPodeSair = Boolean(me) && !souGerente
 
   // Só sai quando: dados carregados, usuário localizado, não está sozinho e,
   // se for o único gerente, já escolheu o sucessor.
   const podeConfirmar =
-    !loading && !loadError && Boolean(me) && !soEu && (!precisaSucessor || successorId != null)
+    !loading && !loadError && Boolean(me) && souGerente && !soEu && (!precisaSucessor || successorId != null)
 
   async function handleConfirm() {
     setSubmitting(true); setError('')
+    let etapa = 'sair'
+    let promovido = false
     try {
       if (precisaSucessor) {
-        // Backend precisa aceitar papel 'gerente' neste PATCH (ver notas da feat).
-        await projetoService.atualizarMembro(projectId, successorId, { papel: 'gerente' })
+        etapa = 'promover'
+        await projetoService.atualizarMembro(projectId, successorId, { cargo: 'GERENTE', papel: 'gerente' })
+        promovido = true
+        etapa = 'sair'
       }
-      await projetoService.sairDoProjeto(projectId)
+      await projetoService.removerMembro(projectId, me.email)
       onLeft?.()
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao sair do projeto. Tente novamente.'))
+      setError(mensagemDeErro(err, etapa, promovido))
       setSubmitting(false)
     }
   }
@@ -70,6 +71,15 @@ export default function LeaveProjectModal({ projectId, projectName, onClose, onL
     if (loading) return <p className={styles.text}>Verificando seu papel no projeto...</p>
     if (loadError) return <p className={styles.errorText}>{loadError}</p>
     if (!me) return <p className={styles.errorText}>Você não faz parte deste projeto.</p>
+
+    if (naoPodeSair) {
+      return (
+        <p className={styles.text}>
+          Você não pode sair de <strong>{projectName}</strong> por conta própria. Para deixar
+          o projeto, peça a um gerente que remova você.
+        </p>
+      )
+    }
 
     if (soEu) {
       return (
@@ -129,9 +139,9 @@ export default function LeaveProjectModal({ projectId, projectName, onClose, onL
         {renderBody()}
         <div className={styles.actions}>
           <button type="button" className={styles.btnCancel} onClick={onClose} disabled={submitting}>
-            {soEu || loadError ? 'Fechar' : 'Cancelar'}
+            {soEu || loadError || naoPodeSair ? 'Fechar' : 'Cancelar'}
           </button>
-          {!soEu && !loadError && (
+          {!soEu && !loadError && !naoPodeSair && (
             <button type="button" className={styles.btnDanger}
               onClick={handleConfirm} disabled={!podeConfirmar || submitting}>
               {submitting
