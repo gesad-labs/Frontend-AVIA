@@ -737,3 +737,86 @@
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* ─── Subcards e dependência ─────────────────────────────────────── */
+.subProgress { font-size: 11px; font-weight: 700; color: #64748b; }
+.subList { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.subItem:hover { background: #f1f5f9; }
+.subAddRow { display: flex; gap: 6px; margin-top: 8px; }
+.subInput {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.subInput:focus { border-color: #6366f1; }
+.subAddBtn {
+  padding: 7px 12px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.subAddBtn:disabled { opacity: .45; cursor: not-allowed; }
+.depSelect {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 8px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  background: #fff;
+  color: #334155;
+}
+.depSelect:disabled { opacity: .5; }
+.depRemove {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.depRemove:hover { color: #b91c1c; }
+.depHint { margin: 6px 0 0; font-size: 11px; color: #94a3b8; }
+.depPending { margin: 6px 0 0; font-size: 11px; font-weight: 600; color: #c2410c; }
+.noticeBox {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.noticeBox button { background: none; border: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
+.modalError { margin: 0 0 10px; padding: 8px 10px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; color: #b91c1c; font-size: 12px; font-weight: 600; }

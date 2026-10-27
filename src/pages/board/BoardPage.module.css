@@ -1209,3 +1209,58 @@
   transition: opacity 0.15s;
 }
 .btnFilterApply:hover { opacity: 0.85; }
+
+/* ── Subcards e dependências (card bloqueado por outro) ── */
+.cardBloqueioTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.cardSubcardTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+/* Aviso quando o back recusa uma movimentação (regra de subcards / bloqueio) */
+.avisoRegra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 32px 0;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.avisoRegra button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
