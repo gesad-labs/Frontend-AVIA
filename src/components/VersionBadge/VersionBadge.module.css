@@ -1,0 +1,28 @@
+.badge {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1000;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  color: #475569;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid #cbd5e1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.homolog {
+  color: #92400e;
+  background: rgba(254, 243, 199, 0.95);
+  border-color: #fcd34d;
+}
+
+.dev {
+  color: #1e40af;
+  background: rgba(219, 234, 254, 0.95);
+  border-color: #93c5fd;
+}

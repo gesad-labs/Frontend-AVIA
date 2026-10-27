@@ -1,11 +1,12 @@
 name: Release
 
-# Ao enviar uma tag de versão (v1.2.3), publica a Release com as notas geradas
-# a partir dos PRs mesclados desde a versão anterior.
+# Quando o arquivo VERSION muda na main, cria a tag vX.Y.Z e publica a Release
+# com as notas geradas a partir dos PRs mesclados desde a versão anterior.
 
 on:
   push:
-    tags: ["v*.*.*"]
+    branches: [main]
+    paths: [VERSION]
 
 permissions:
   contents: write
@@ -14,12 +15,18 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Publica a release
+      - name: Publica a release da versão
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          VERSION=$(gh api "repos/$GITHUB_REPOSITORY/contents/VERSION?ref=$GITHUB_SHA" --jq .content | base64 -d | tr -d '[:space:]')
+          TAG="v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A release $TAG já existe."
+            exit 0
+          fi
+          gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes \
-            --verify-tag
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --generate-notes
