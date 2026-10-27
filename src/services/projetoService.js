@@ -30,6 +30,7 @@ export const projetoService = {
   moverTarefa:       (id, tid, data)=> api.patch(`/projetos/${id}/tarefas/${tid}/sprint`, data),
   removerTarefa:     (id, tid)      => api.delete(`/projetos/${id}/tarefas/${tid}`),
   buscarTarefa:      (id, tid)      => api.get(`/projetos/${id}/tarefas/${tid}`),
+  listarSubtarefas:  (id, tid)      => api.get(`/projetos/${id}/tarefas/${tid}/subtarefas`),
 
   // Usuário atual
   buscarUsuarioAtual: () => api.get('/usuario/eu'),

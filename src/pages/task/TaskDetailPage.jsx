@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
+import { getErrorMessage } from '../../utils/errors'
 import styles from './TaskDetailPage.module.css'
 
 /* ─── Constants ─────────────────────────────────────────────────────── */
@@ -232,10 +233,12 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
   const [search,  setSearch]  = useState('')
   const [loading, setLoading] = useState(true)
   const [busy,    setBusy]    = useState(false)
+  const [err,     setErr]     = useState('')
 
   useEffect(() => {
     projetoService.listarTarefas(projectId)
-      .then(data => setTasks(Array.isArray(data) ? data.filter(t => t.id !== Number(currentTaskId)) : []))
+      // Um subcard não pode ser pai de outro (regra do back): só lista cards de nível raiz.
+      .then(data => setTasks(Array.isArray(data) ? data.filter(t => t.id !== Number(currentTaskId) && t.tarefaParenteId == null) : []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [projectId, currentTaskId])
@@ -246,21 +249,23 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
   )
 
   async function handleSelect(taskId) {
-    setBusy(true)
+    setBusy(true); setErr('')
     try {
       await onLink(taskId)
       onClose()
-    } catch {
+    } catch (e) {
+      setErr(getErrorMessage(e, 'Não foi possível definir o card pai.'))
       setBusy(false)
     }
   }
 
   async function handleUnlink() {
-    setBusy(true)
+    setBusy(true); setErr('')
     try {
       await onLink(-1)
       onClose()
-    } catch {
+    } catch (e) {
+      setErr(getErrorMessage(e, 'Não foi possível desvincular o card.'))
       setBusy(false)
     }
   }
@@ -269,7 +274,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Vincular Tarefa</h3>
+          <h3 className={styles.modalTitle}>Definir card pai</h3>
           <button type="button" className={styles.modalClose} onClick={onClose}><IconX /></button>
         </div>
         <div className={styles.modalBody}>
@@ -278,6 +283,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
             <input className={styles.searchInput} value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar tarefa..." autoFocus />
           </div>
+          {err && <p className={styles.modalError} role="alert">{err}</p>}
           {loading ? (
             <p className={styles.emptyNote}>Carregando...</p>
           ) : filtered.length === 0 ? (
@@ -303,7 +309,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
           {parentId && (
             <div className={styles.modalFooter}>
               <button type="button" className={styles.btnDanger} onClick={handleUnlink} disabled={busy}>
-                Desvincular tarefa atual
+                Remover vínculo com o card pai
               </button>
             </div>
           )}
@@ -325,6 +331,11 @@ export default function TaskDetailPage() {
   const [comentarios, setComentarios] = useState([])
   const [anexos,    setAnexos]    = useState([])
   const [parentTask, setParentTask] = useState(null)
+  const [subcards,  setSubcards]  = useState([])
+  const [todasTarefas, setTodasTarefas] = useState([])
+  const [notice,    setNotice]    = useState('')
+  const [novoSubTitulo, setNovoSubTitulo] = useState('')
+  const [criandoSub,  setCriandoSub]  = useState(false)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
 
@@ -349,13 +360,17 @@ export default function TaskDetailPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const [t, m, c, a] = await Promise.all([
+      const [t, m, c, a, subs, todas] = await Promise.all([
         projetoService.buscarTarefa(projectId, taskId),
         projetoService.listarMembros(projectId),
         projetoService.listarComentarios(projectId, taskId).catch(() => []),
         projetoService.listarAnexos(projectId, taskId).catch(() => []),
+        projetoService.listarSubtarefas(projectId, taskId).catch(() => []),
+        projetoService.listarTarefas(projectId).catch(() => []),
       ])
       setTarefa(t)
+      setSubcards(Array.isArray(subs) ? subs : [])
+      setTodasTarefas(Array.isArray(todas) ? todas : [])
       setMembros(Array.isArray(m) ? m : [])
       setComentarios(Array.isArray(c) ? c : [])
       setAnexos(Array.isArray(a) ? a : [])
@@ -395,10 +410,60 @@ export default function TaskDetailPage() {
   }
 
   async function patchStatus(val) {
-    setSavingField('status')
+    setSavingField('status'); setNotice('')
     try {
       const updated = await projetoService.atualizarStatus(projectId, taskId, { status: val })
       setTarefa(updated)
+    } catch (err) {
+      // 409: subcards pendentes / card bloqueado / pai concluído — o back explica o motivo.
+      setNotice(getErrorMessage(err, 'Não foi possível alterar o status.'))
+    } finally { setSavingField(null) }
+  }
+
+  /* ── Subcards e dependência (regras validadas no back) ── */
+  async function recarregarRelacionados() {
+    try {
+      const [t, subs, todas] = await Promise.all([
+        projetoService.buscarTarefa(projectId, taskId),
+        projetoService.listarSubtarefas(projectId, taskId),
+        projetoService.listarTarefas(projectId),
+      ])
+      setTarefa(t)
+      setSubcards(Array.isArray(subs) ? subs : [])
+      setTodasTarefas(Array.isArray(todas) ? todas : [])
+    } catch { /* mantém o que já está na tela */ }
+  }
+
+  async function criarSubcard(e) {
+    e.preventDefault()
+    const titulo = novoSubTitulo.trim()
+    if (!titulo) return
+    setCriandoSub(true); setNotice('')
+    try {
+      await projetoService.criarTarefa(projectId, {
+        titulo,
+        descricao:       titulo,
+        status:          'A_FAZER',
+        prioridade:      tarefa.prioridade ?? 'MEDIA',
+        sprintId:        tarefa.sprintId ?? null,   // fica na mesma sprint do card pai
+        tarefaParenteId: tarefa.id,
+        responsaveisIds: [],
+      })
+      setNovoSubTitulo('')
+      await recarregarRelacionados()
+    } catch (err) {
+      setNotice(getErrorMessage(err, 'Não foi possível criar o subcard.'))
+    } finally { setCriandoSub(false) }
+  }
+
+  async function definirBloqueio(predecessoraId) {
+    setSavingField('bloqueio'); setNotice('')
+    try {
+      // -1 remove a dependência (convenção do back, igual ao tarefaParenteId).
+      const updated = await projetoService.editarTarefa(projectId, taskId, { bloqueadaPorId: predecessoraId })
+      setTarefa(updated)
+    } catch (err) {
+      setNotice(getErrorMessage(err, 'Não foi possível definir a dependência.'))
     } finally { setSavingField(null) }
   }
 
@@ -453,6 +518,7 @@ export default function TaskDetailPage() {
 
   async function vincularTarefa(parentTaskId) {
     await patchTarefa({ tarefaParenteId: parentTaskId })
+    recarregarRelacionados()
   }
 
   function parseEmailsMencionados(text) {
@@ -524,6 +590,18 @@ export default function TaskDetailPage() {
   }
 
   const statusMeta    = STATUS_COLORS[tarefa.status]    || STATUS_COLORS.A_FAZER
+  const subcardsConcluidos = subcards.filter(s => s.status === 'CONCLUIDA').length
+  const ehSubcard      = tarefa.tarefaParenteId != null
+  const predecessora   = tarefa.bloqueadaPorId != null
+    ? todasTarefas.find(x => x.id === tarefa.bloqueadaPorId) ?? null
+    : null
+  // O back recusa: a própria tarefa, o pai e os subcards. Cíclicos o back também recusa (409) e avisa.
+  const candidatasBloqueio = todasTarefas.filter(x =>
+    x.id !== tarefa.id &&
+    x.id !== tarefa.tarefaParenteId &&
+    x.tarefaParenteId !== tarefa.id &&
+    x.id !== tarefa.bloqueadaPorId
+  )
   const prioridadeMeta = tarefa.prioridade ? PRIORIDADE_COLORS[tarefa.prioridade] : null
 
   return (
@@ -715,6 +793,13 @@ export default function TaskDetailPage() {
       {/* ─── Right sidebar ─── */}
       <aside className={styles.sidebar}>
 
+        {notice && (
+          <div className={styles.noticeBox} role="alert">
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice('')} aria-label="Fechar aviso">×</button>
+          </div>
+        )}
+
         {/* Status */}
         <div className={styles.sideSection}>
           <p className={styles.sideLabel}>STATUS</p>
@@ -853,8 +938,8 @@ export default function TaskDetailPage() {
         {/* Tarefas Vinculadas */}
         <div className={styles.sideSection}>
           <div className={styles.sideSectionHead}>
-            <p className={styles.sideLabel}>TAREFAS VINCULADAS</p>
-            <button className={styles.sidePlusBtn} onClick={() => setShowVincular(true)} title="Vincular tarefa">
+            <p className={styles.sideLabel}>CARD PAI</p>
+            <button className={styles.sidePlusBtn} onClick={() => setShowVincular(true)} title="Definir card pai">
               <IconPlus />
             </button>
           </div>
@@ -869,8 +954,96 @@ export default function TaskDetailPage() {
               </span>
             </div>
           ) : (
-            <p className={styles.descEmpty}>Nenhuma tarefa vinculada.</p>
+            <p className={styles.descEmpty}>Este card não é subcard de nenhum outro.</p>
           )}
+        </div>
+
+        {/* Subcards */}
+        <div className={styles.sideSection}>
+          <div className={styles.sideSectionHead}>
+            <p className={styles.sideLabel}>SUBCARDS</p>
+            {subcards.length > 0 && (
+              <span className={styles.subProgress}>{subcardsConcluidos}/{subcards.length} concluídos</span>
+            )}
+          </div>
+          {subcards.length === 0 ? (
+            <p className={styles.descEmpty}>Nenhum subcard.</p>
+          ) : (
+            <div className={styles.subList}>
+              {subcards.map(s => {
+                const sc = STATUS_COLORS[s.status] || STATUS_COLORS.A_FAZER
+                return (
+                  <button key={s.id} type="button" className={styles.subItem}
+                    onClick={() => navigate(`/project/${projectId}/task/${s.id}`)}>
+                    <span className={styles.linkedTaskId}>#{s.id}</span>
+                    <span className={styles.linkedTaskTitle}>{s.titulo}</span>
+                    <span className={styles.linkedTaskStatus} style={{ background: sc.bg, color: sc.color }}>
+                      {STATUS_OPTIONS.find(o => o.value === s.status)?.label ?? s.status}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {ehSubcard ? (
+            <p className={styles.depHint}>Um subcard não pode ter subcards.</p>
+          ) : tarefa.status === 'CONCLUIDA' ? (
+            <p className={styles.depHint}>Reabra este card para adicionar subcards.</p>
+          ) : (
+            <form className={styles.subAddRow} onSubmit={criarSubcard}>
+              <input
+                className={styles.subInput}
+                value={novoSubTitulo}
+                onChange={e => setNovoSubTitulo(e.target.value)}
+                placeholder="Novo subcard..."
+                maxLength={120}
+                disabled={criandoSub}
+              />
+              <button type="submit" className={styles.subAddBtn} disabled={criandoSub || !novoSubTitulo.trim()}>
+                {criandoSub ? '...' : 'Adicionar'}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {/* Bloqueado por */}
+        <div className={styles.sideSection}>
+          <p className={styles.sideLabel}>BLOQUEADO POR</p>
+          {tarefa.bloqueadaPorId != null && (
+            <div className={styles.linkedTask}>
+              <span className={styles.linkedTaskId}>#{tarefa.bloqueadaPorId}</span>
+              <span className={styles.linkedTaskTitle}>{predecessora?.titulo ?? 'Card não encontrado'}</span>
+              {predecessora && (
+                <span className={styles.linkedTaskStatus}
+                  style={{ background: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).bg,
+                           color: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).color }}>
+                  {STATUS_OPTIONS.find(o => o.value === predecessora.status)?.label ?? predecessora.status}
+                </span>
+              )}
+              <button type="button" className={styles.depRemove} title="Remover dependência"
+                onClick={() => definirBloqueio(-1)} disabled={savingField === 'bloqueio'}>×</button>
+            </div>
+          )}
+          {tarefa.bloqueadaPorId != null && (
+            <p className={tarefa.bloqueada ? styles.depPending : styles.depHint}>
+              {tarefa.bloqueada
+                ? 'Aguardando a conclusão deste card para poder ir para "Fazendo".'
+                : 'Predecessor concluído: este card está liberado.'}
+            </p>
+          )}
+          {tarefa.bloqueadaPorId == null && <p className={styles.descEmpty}>Nenhum card bloqueando este.</p>}
+          <select
+            className={styles.depSelect}
+            value=""
+            disabled={savingField === 'bloqueio' || candidatasBloqueio.length === 0}
+            onChange={e => { if (e.target.value) definirBloqueio(Number(e.target.value)) }}
+            aria-label="Definir card que bloqueia este"
+          >
+            <option value="">{tarefa.bloqueadaPorId == null ? 'Definir bloqueado por…' : 'Trocar predecessor…'}</option>
+            {candidatasBloqueio.map(x => (
+              <option key={x.id} value={x.id}>#{x.id} · {x.titulo}</option>
+            ))}
+          </select>
         </div>
 
         {/* Histórico placeholder */}

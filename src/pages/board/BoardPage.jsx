@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useNotificacoesCtx } from '../../contexts/NotificacoesContext'
+import { getErrorMessage } from '../../utils/errors'
 import styles from './BoardPage.module.css'
 
 const COLUMNS = [
@@ -268,6 +269,26 @@ function CardImpedimentoTag() {
   )
 }
 
+/* Card com predecessor ainda não concluído (campo `bloqueada` vem do back). */
+function CardBloqueioTag({ bloqueadaPorId }) {
+  return (
+    <span
+      className={styles.cardBloqueioTag}
+      title={`Só pode ir para "Fazendo" depois que APS-${bloqueadaPorId} for concluído`}
+    >
+      <IconBlock /> Bloqueado por APS-{bloqueadaPorId}
+    </span>
+  )
+}
+
+function CardSubcardTag({ paiId }) {
+  return (
+    <span className={styles.cardSubcardTag} title={`Este card é um subcard de APS-${paiId}`}>
+      Subcard de APS-{paiId}
+    </span>
+  )
+}
+
 function CardStatusTag({ status }) {
   if (!status) return null
   const cfg = STATUS_COLORS[status]
@@ -406,6 +427,11 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
     if (!titulo.trim()) { setError('Título obrigatório'); return }
     setSaving(true); setError('')
     try {
+      // Status primeiro: é onde o back aplica as regras (subcards pendentes / bloqueio).
+      // Se for recusado, nada mais é salvo e o usuário vê o motivo.
+      if (status !== tarefa.status) {
+        await projetoService.atualizarStatus(projectId, tarefa.id, { status })
+      }
       await projetoService.editarTarefa(projectId, tarefa.id, {
         titulo:          titulo.trim(),
         descricao:       descricao.trim() || titulo.trim(),
@@ -415,12 +441,9 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
         tipo:            tipo.trim() || null,
         impedimento,
       })
-      if (status !== tarefa.status) {
-        await projetoService.atualizarStatus(projectId, tarefa.id, { status })
-      }
       onSaved()
-    } catch {
-      setError('Erro ao salvar.')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Erro ao salvar.'))
       setSaving(false)
     }
   }
@@ -717,6 +740,8 @@ function TaskCard({ tarefa, projectId, notifs = [], onDetail, onEdit, onDelete, 
         <CardTypeTag tipo={tarefa.tipo} />
         <CardPrioridadeTag prioridade={tarefa.prioridade} />
         {tarefa.impedimento && <CardImpedimentoTag />}
+        {tarefa.bloqueada && tarefa.bloqueadaPorId != null && <CardBloqueioTag bloqueadaPorId={tarefa.bloqueadaPorId} />}
+        {tarefa.tarefaParenteId != null && <CardSubcardTag paiId={tarefa.tarefaParenteId} />}
       </div>
 
       {/* Impedimento toggle */}
@@ -744,8 +769,11 @@ function TaskCard({ tarefa, projectId, notifs = [], onDetail, onEdit, onDelete, 
             </span>
           )}
           {hasSubtarefas && (
-            <span className={styles.cardMetaChip} title={`${tarefa.subtarefasCount} sub-tarefa(s)`}>
-              <IconCheckSquare /> {tarefa.subtarefasCount}
+            <span
+              className={styles.cardMetaChip}
+              title={`${tarefa.subtarefasConcluidasCount ?? 0} de ${tarefa.subtarefasCount} subcard(s) concluído(s)`}
+            >
+              <IconCheckSquare /> {tarefa.subtarefasConcluidasCount ?? 0}/{tarefa.subtarefasCount}
             </span>
           )}
         </div>
@@ -770,7 +798,7 @@ function TaskCard({ tarefa, projectId, notifs = [], onDetail, onEdit, onDelete, 
 }
 
 /* ── Board column ── */
-function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onDetail, onEdit, onDelete, canCreateTarefas, canEdit, canDelete, notifsByTarefaId }) {
+function BoardColumn({ column, tarefas, projectId, onRefresh, onMoveStatus, onAddCard, onDetail, onEdit, onDelete, canCreateTarefas, canEdit, canDelete, notifsByTarefaId }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [dropping, setDropping]     = useState(false)
   const counter = useRef(0)
@@ -789,8 +817,7 @@ function BoardColumn({ column, tarefas, projectId, onRefresh, onAddCard, onDetai
     if (sourceStatus === column.key) return
     setDropping(true)
     try {
-      await projetoService.atualizarStatus(projectId, tarefaId, { status: column.key })
-      onRefresh()
+      await onMoveStatus(tarefaId, column.key)
     } finally {
       setDropping(false)
     }
@@ -876,6 +903,7 @@ export default function BoardPage() {
   const [editingCard, setEditingCard]           = useState(null)
   const [addingCardStatus, setAddingCardStatus] = useState(null)
   const [closingSprint, setClosingSprint]       = useState(false)
+  const [aviso, setAviso]                       = useState('')
 
   const [sortBy, setSortBy]   = useState('none')
   const [sortDir, setSortDir] = useState('asc')
@@ -948,6 +976,18 @@ export default function BoardPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  /* Regras (subcards pendentes, bloqueio por predecessor) são validadas no back;
+     aqui só exibimos a mensagem que ele devolve (409). */
+  async function handleMoveStatus(tarefaId, novoStatus) {
+    setAviso('')
+    try {
+      await projetoService.atualizarStatus(projectId, tarefaId, { status: novoStatus })
+      await fetchAll()
+    } catch (err) {
+      setAviso(getErrorMessage(err, 'Não foi possível mover o card.'))
+    }
+  }
+
   async function handleEncerrarSprint() {
     if (!sprint) return
     const incompletos = tarefas.filter(t => t.status !== 'CONCLUIDA').length
@@ -970,8 +1010,8 @@ export default function BoardPage() {
     try {
       await projetoService.removerTarefa(projectId, tarefa.id)
       setTarefas(prev => prev.filter(t => t.id !== tarefa.id))
-    } catch {
-      alert('Erro ao excluir.')
+    } catch (err) {
+      alert(getErrorMessage(err, 'Erro ao excluir.'))
     }
   }
 
@@ -1111,6 +1151,13 @@ export default function BoardPage() {
         </div>
       </div>
 
+      {aviso && (
+        <div className={styles.avisoRegra} role="alert">
+          <span>{aviso}</span>
+          <button type="button" onClick={() => setAviso('')} aria-label="Fechar aviso">×</button>
+        </div>
+      )}
+
       {/* Board canvas */}
       <div className={styles.boardCanvas}>
         <div className={styles.board}>
@@ -1121,6 +1168,7 @@ export default function BoardPage() {
               tarefas={tasksByStatus[col.key] ?? []}
               projectId={projectId}
               onRefresh={fetchAll}
+              onMoveStatus={handleMoveStatus}
               onAddCard={status => navigate(`/project/${projectId}/card/new?sprintId=${sprint.id}&status=${status}`)}
               onDetail={t => navigate(`/project/${projectId}/task/${t.id}`)}
               onEdit={t => setEditingCard(t)}

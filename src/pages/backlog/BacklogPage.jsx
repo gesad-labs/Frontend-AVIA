@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
+import { getErrorMessage } from '../../utils/errors'
 import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './BacklogPage.module.css'
 
@@ -489,6 +490,9 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
     try {
       await projetoService.removerTarefa(projectId, tarefa.id)
       onRefresh()
+    } catch (err) {
+      // Ex.: 409 quando o card tem subcards — o back explica o que fazer.
+      alert(getErrorMessage(err, 'Erro ao remover.'))
     } finally {
       setRemoving(false)
     }
