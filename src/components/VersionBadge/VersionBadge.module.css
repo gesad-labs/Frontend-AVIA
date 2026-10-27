@@ -15,6 +15,18 @@
   user-select: none;
 }
 
+.close {
+  margin-left: 6px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 .homolog {
   color: #92400e;
   background: rgba(254, 243, 199, 0.95);
