@@ -1,5 +1,7 @@
 .badge {
   position: fixed;
+  display: flex;
+  align-items: center;
   right: 8px;
   bottom: 8px;
   z-index: 1000;
@@ -16,8 +18,11 @@
 }
 
 .close {
+  display: flex;
+  align-items: center;
   margin-left: 6px;
   padding: 0 2px;
+  height: 18px;
   border: 0;
   background: none;
   color: inherit;
