@@ -13,6 +13,10 @@ export function NotificationProvider({ children }) {
   const [focusUntil, setFocusUntil] = useState(null);
   const [unread, setUnread]         = useState(0);
 
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const addToast = useCallback(({ type = 'info', message, duration = 4000, critical = false }) => {
     // In focus mode, only critical notifications (mentions, impediments) pass through
     if (focusMode && !critical) return;
@@ -20,11 +24,7 @@ export function NotificationProvider({ children }) {
     const id = ++toastId;
     setToasts((prev) => [...prev, { id, type, message, critical }]);
     setTimeout(() => removeToast(id), duration);
-  }, [focusMode]);
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  }, [focusMode, removeToast]);
 
   const enableFocusMode = useCallback((durationMs) => {
     setFocusMode(true);

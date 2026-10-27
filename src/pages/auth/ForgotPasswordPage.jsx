@@ -55,7 +55,11 @@ export default function ForgotPasswordPage() {
 
           {sent ? (
             <div className={styles.success}>
-              <p>Link enviado para <strong>{email}</strong>. Verifique sua caixa de entrada.</p>
+              <p>
+                Solicitação enviada para <strong>{email}</strong>.{' '}
+                Em desenvolvimento, o link de redefinição é impresso no{' '}
+                <strong>console do servidor</strong> (backend).
+              </p>
             </div>
           ) : (
             <form className={styles.form} onSubmit={handleSubmit} noValidate>
