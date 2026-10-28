@@ -1,216 +1,240 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, Navigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
+import { projetoService } from '../../services/projetoService'
 import styles from './PermissionsPage.module.css'
 
-/* ── Mock Data ── */
+/* ── Permission groups — keys match backend PermissoesUsuarioProjeto.nome ── */
 const PERMISSION_GROUPS = [
   {
     key: 'content',
     label: 'CONTEÚDO & TAREFAS',
     permissions: [
-      { key: 'criar_tarefas',  label: 'Criar tarefas' },
-      { key: 'editar_tarefas', label: 'Editar tarefas' },
-      { key: 'excluir_tarefas', label: 'Excluir tarefas' },
-      { key: 'mover_tarefas',  label: 'Mover tarefas' },
+      { key: 'Criar Tarefas',   label: 'Criar tarefas' },
+      { key: 'Editar Tarefas',  label: 'Editar tarefas' },
+      { key: 'Excluir Tarefas', label: 'Excluir tarefas' },
+      { key: 'Mover Tarefas',   label: 'Mover tarefas' },
     ],
   },
   {
     key: 'structure',
     label: 'ESTRUTURA DO PROJETO',
     permissions: [
-      { key: 'criar_colunas',    label: 'Criar colunas' },
-      { key: 'editar_estrutura', label: 'Editar estrutura' },
-      { key: 'gerenciar_sprints', label: 'Gerenciar sprints' },
+      { key: 'Criar Colunas',     label: 'Criar sprints' },
+      { key: 'Editar Estrutura',  label: 'Editar estrutura' },
+      { key: 'Gerenciar Sprints', label: 'Gerenciar sprints' },
     ],
   },
   {
     key: 'team',
     label: 'GESTÃO DE EQUIPE',
     permissions: [
-      { key: 'adicionar_membros',  label: 'Adicionar membros' },
-      { key: 'remover_membros',    label: 'Remover membros' },
-      { key: 'alterar_permissoes', label: 'Alterar permissões' },
+      { key: 'Adicionar Membros', label: 'Adicionar membros' },
+      { key: 'Remover Membros',   label: 'Remover membros' },
     ],
   },
 ]
 
-const INITIAL_MEMBERS = [
-  {
-    id: 1,
-    name: 'Ricardo Santos',
-    email: 'ricardo.santos@avia.com',
-    role: 'GERENTE',
-    permissions: {
-      criar_tarefas: true,
-      editar_tarefas: true,
-      excluir_tarefas: true,
-      mover_tarefas: true,
-      criar_colunas: true,
-      editar_estrutura: true,
-      gerenciar_sprints: true,
-      adicionar_membros: false,
-      remover_membros: false,
-      alterar_permissoes: false,
-    },
-  },
-  {
-    id: 2,
-    name: 'Beatriz Lima',
-    email: 'beatriz.lima@avia.com',
-    role: 'MEMBRO',
-    permissions: {
-      criar_tarefas: true,
-      editar_tarefas: true,
-      excluir_tarefas: false,
-      mover_tarefas: true,
-      criar_colunas: false,
-      editar_estrutura: false,
-      gerenciar_sprints: false,
-      adicionar_membros: false,
-      remover_membros: false,
-      alterar_permissoes: false,
-    },
-  },
-  {
-    id: 3,
-    name: 'Carlos Oliveira',
-    email: 'carlos.oliveira@avia.com',
-    role: 'CONVIDADO',
-    permissions: {
-      criar_tarefas: false,
-      editar_tarefas: false,
-      excluir_tarefas: false,
-      mover_tarefas: false,
-      criar_colunas: false,
-      editar_estrutura: false,
-      gerenciar_sprints: false,
-      adicionar_membros: false,
-      remover_membros: false,
-      alterar_permissoes: false,
-    },
-  },
-]
-
 const ROLE_META = {
-  ADMINISTRADOR: { label: 'Administrador', color: '#02214E' },
-  GERENTE:       { label: 'Gerente',       color: '#0369a1' },
-  MEMBRO:        { label: 'Membro',        color: '#475569' },
-  CONVIDADO:     { label: 'Convidado',     color: '#9ca3af' },
+  Gerente:      { color: '#0369a1' },
+  Membro:       { color: '#1d4ed8' },
+  Visualizador: { color: '#7c3aed' },
 }
 
-function initials(name) {
-  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+const AVATAR_COLORS = ['#f97316', '#0891b2', '#7c3aed', '#0369a1', '#15803d', '#be123c']
+function avatarColor(str = '') {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
+function initials(name = '') {
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?'
+}
+
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false
+  for (const v of a) if (!b.has(v)) return false
+  return true
 }
 
 const ChevronIcon = ({ open }) => (
-  <svg
-    width="16" height="16" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" strokeWidth="2"
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
     strokeLinecap="round" strokeLinejoin="round"
-    style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}
-  >
+    style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
     <polyline points="6 9 12 15 18 9" />
   </svg>
 )
 
-/* ── Toggle Switch ── */
-function Toggle({ checked, onChange }) {
+/* ── Interactive toggle ── */
+function Toggle({ checked, onChange, readOnly, disabled }) {
   return (
     <button
+      type="button"
       role="switch"
       aria-checked={checked}
-      className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`}
-      onClick={() => onChange(!checked)}
-      type="button"
+      onClick={readOnly ? undefined : onChange}
+      disabled={disabled}
+      className={`${styles.toggle} ${checked ? styles.toggleOn : ''} ${readOnly ? styles.toggleReadOnly : ''}`}
     >
       <span className={styles.toggleThumb} />
     </button>
   )
 }
 
-/* ── Member Card ── */
-function MemberCard({ member, expanded, onToggleExpand }) {
-  const [draft, setDraft] = useState({ ...member.permissions })
-  const [saved, setSaved] = useState({ ...member.permissions })
-  const [dirty, setDirty] = useState(false)
+/* ── Member card with lazy permission load ── */
+function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
+  const [apiPerms,  setApiPerms]  = useState(null)
+  const [editPerms, setEditPerms] = useState(null)
+  const [cardStatus, setCardStatus] = useState('idle') // 'idle'|'loading'|'saving'|'resetting'
+  const [cardError, setCardError] = useState('')
 
-  function handlePerm(key, val) {
-    const next = { ...draft, [key]: val }
-    setDraft(next)
-    setDirty(true)
+  const isGerente = membro.cargo === 'Gerente'
+  const badgeColor = ROLE_META[membro.cargo]?.color ?? '#475569'
+
+  /* Load actual permissions on first expand (skip for Gerentes — they have all) */
+  useEffect(() => {
+    if (!expanded || apiPerms !== null || isGerente) return
+    setCardStatus('loading')
+    setCardError('')
+    projetoService.buscarPermissoesMembro(projectId, membro.id)
+      .then(data => {
+        const set = new Set(Array.isArray(data?.permissoes) ? data.permissoes : [])
+        setApiPerms(set)
+        setEditPerms(new Set(set))
+      })
+      .catch(() => setCardError('Erro ao carregar permissões.'))
+      .finally(() => setCardStatus('idle'))
+  }, [expanded, projectId, membro.id, apiPerms, isGerente])
+
+  function togglePerm(key) {
+    setEditPerms(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
   }
 
-  function handleSave() {
-    setSaved({ ...draft })
-    setDirty(false)
+  const isDirty = editPerms && apiPerms && !setsEqual(editPerms, apiPerms)
+  const busy    = cardStatus !== 'idle'
+
+  async function handleSave() {
+    setCardStatus('saving')
+    setCardError('')
+    try {
+      await projetoService.editarPermissoesMembro(projectId, membro.id, {
+        permissoes: Array.from(editPerms),
+      })
+      setApiPerms(new Set(editPerms))
+    } catch {
+      setCardError('Erro ao salvar. Tente novamente.')
+    } finally {
+      setCardStatus('idle')
+    }
   }
 
   function handleDiscard() {
-    setDraft({ ...saved })
-    setDirty(false)
+    setEditPerms(new Set(apiPerms))
+    setCardError('')
   }
 
-  const meta = ROLE_META[member.role] || ROLE_META.CONVIDADO
+  async function handleReset() {
+    setCardStatus('resetting')
+    setCardError('')
+    try {
+      await projetoService.restaurarPermissoesMembro(projectId, membro.id)
+      const data = await projetoService.buscarPermissoesMembro(projectId, membro.id)
+      const set = new Set(Array.isArray(data?.permissoes) ? data.permissoes : [])
+      setApiPerms(set)
+      setEditPerms(new Set(set))
+    } catch {
+      setCardError('Erro ao restaurar. Tente novamente.')
+    } finally {
+      setCardStatus('idle')
+    }
+  }
 
   return (
     <div className={`${styles.card} ${expanded ? styles.cardExpanded : ''}`}>
-      {/* Card header row */}
       <button className={styles.cardHeader} onClick={onToggleExpand} type="button">
-        <div className={styles.memberAvatar}>{initials(member.name)}</div>
-        <div className={styles.memberInfo}>
-          <span className={styles.memberName}>{member.name}</span>
-          <span className={styles.memberEmail}>{member.email}</span>
+        <div className={styles.memberAvatar} style={{ background: avatarColor(membro.nome || membro.email) }}>
+          {initials(membro.nome || membro.email)}
         </div>
-        <span
-          className={styles.roleBadge}
-          style={{ background: meta.color }}
-        >
-          {meta.label}
+        <div className={styles.memberInfo}>
+          <span className={styles.memberName}>
+            {membro.nome}
+            {isMe && <span className={styles.youTag}>Você</span>}
+          </span>
+          <span className={styles.memberEmail}>{membro.email}</span>
+        </div>
+        <span className={styles.roleBadge} style={{ background: badgeColor }}>
+          {membro.cargo ?? 'Membro'}
         </span>
-        <span className={styles.cardChevron}>
-          <ChevronIcon open={expanded} />
-        </span>
+        <span className={styles.cardChevron}><ChevronIcon open={expanded} /></span>
       </button>
 
-      {/* Expanded permissions body */}
       {expanded && (
         <div className={styles.cardBody}>
-          <div className={styles.groupsGrid}>
-            {PERMISSION_GROUPS.map(group => (
-              <div key={group.key} className={styles.group}>
-                <p className={styles.groupTitle}>{group.label}</p>
-                <div className={styles.permList}>
-                  {group.permissions.map(perm => (
-                    <div key={perm.key} className={styles.permRow}>
-                      <span className={styles.permLabel}>{perm.label}</span>
-                      <Toggle
-                        checked={draft[perm.key]}
-                        onChange={val => handlePerm(perm.key, val)}
-                      />
+          {isGerente ? (
+            <p className={styles.gerenteNote}>
+              Gerentes possuem todas as permissões do projeto por definição.
+            </p>
+          ) : cardStatus === 'loading' ? (
+            <p className={styles.loadingNote}>Carregando permissões...</p>
+          ) : (
+            <>
+              <div className={styles.groupsGrid}>
+                {PERMISSION_GROUPS.map(group => (
+                  <div key={group.key} className={styles.group}>
+                    <p className={styles.groupTitle}>{group.label}</p>
+                    <div className={styles.permList}>
+                      {group.permissions.map(perm => (
+                        <div key={perm.key} className={styles.permRow}>
+                          <span className={styles.permLabel}>{perm.label}</span>
+                          <Toggle
+                            checked={editPerms?.has(perm.key) ?? false}
+                            onChange={() => togglePerm(perm.key)}
+                            disabled={busy}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className={styles.cardActions}>
-            <button
-              className={styles.btnDiscard}
-              onClick={handleDiscard}
-              disabled={!dirty}
-              type="button"
-            >
-              Descartar
-            </button>
-            <button
-              className={styles.btnSave}
-              onClick={handleSave}
-              disabled={!dirty}
-              type="button"
-            >
-              Salvar Alterações
-            </button>
-          </div>
+              {cardError && <p className={styles.cardErrorMsg}>{cardError}</p>}
+
+              <div className={styles.cardActions}>
+                <button
+                  type="button"
+                  className={styles.btnReset}
+                  onClick={handleReset}
+                  disabled={busy}
+                  title="Restaurar permissões padrão do papel"
+                >
+                  {cardStatus === 'resetting' ? 'Restaurando...' : 'Restaurar padrão'}
+                </button>
+                <div style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  className={styles.btnDiscard}
+                  onClick={handleDiscard}
+                  disabled={!isDirty || busy}
+                >
+                  Descartar
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnSave}
+                  onClick={handleSave}
+                  disabled={!isDirty || busy}
+                >
+                  {cardStatus === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -219,7 +243,36 @@ function MemberCard({ member, expanded, onToggleExpand }) {
 
 /* ── Page ── */
 export default function PermissionsPage() {
-  const [expanded, setExpanded] = useState(1) // first card open by default
+  const { projectId } = useParams()
+  const { user }      = useAuth()
+  const [membros,    setMembros]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState('')
+  const [expanded,   setExpanded]   = useState(null)
+  const [myIsGerente, setMyIsGerente] = useState(null) // null while loading
+
+  const fetchMembros = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const data = await projetoService.listarMembros(projectId)
+      const list = Array.isArray(data) ? data : []
+      setMembros(list)
+      const me = list.find(m => m.email === user?.email)
+      setMyIsGerente(me?.cargo === 'Gerente')
+    } catch {
+      setError('Erro ao carregar membros.')
+      setMyIsGerente(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [projectId, user?.email])
+
+  useEffect(() => { fetchMembros() }, [fetchMembros])
+
+  /* Redirect non-gerentes to view-only page */
+  if (!loading && myIsGerente === false) {
+    return <Navigate to={`/project/${projectId}/permissions/view`} replace />
+  }
 
   function toggle(id) {
     setExpanded(prev => (prev === id ? null : id))
@@ -227,27 +280,31 @@ export default function PermissionsPage() {
 
   return (
     <div className={styles.page}>
-      {/* Page header */}
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Permissões por Membro</h1>
-          <p className={styles.subtitle}>
-            Configure individualmente as permissões de cada membro do projeto.
-          </p>
-        </div>
+        <h1 className={styles.title}>Permissões por Membro</h1>
+        <p className={styles.subtitle}>
+          Gerencie acessos granulares para cada integrante. Alterações extras sobrepõem o papel padrão.
+        </p>
       </div>
 
-      {/* Member cards */}
-      <div className={styles.list}>
-        {INITIAL_MEMBERS.map(member => (
-          <MemberCard
-            key={member.id}
-            member={member}
-            expanded={expanded === member.id}
-            onToggleExpand={() => toggle(member.id)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <p className={styles.subtitle}>Carregando membros...</p>
+      ) : error ? (
+        <p style={{ color: '#ef4444' }}>{error}</p>
+      ) : (
+        <div className={styles.list}>
+          {membros.map(m => (
+            <MemberCard
+              key={m.id}
+              membro={m}
+              projectId={projectId}
+              expanded={expanded === m.id}
+              onToggleExpand={() => toggle(m.id)}
+              isMe={m.email === user?.email}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

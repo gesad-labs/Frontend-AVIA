@@ -260,6 +260,110 @@
   cursor: not-allowed;
 }
 
+/* Toggle read-only */
+.toggleReadOnly {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* You tag */
+.youTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 9999px;
+  vertical-align: middle;
+}
+
+/* Role selector */
+.roleSelectorWrap {
+  margin-bottom: 20px;
+}
+
+.roleSelectorLabel {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.9px;
+  color: #637083;
+}
+
+.roleSelector {
+  display: flex;
+  gap: 8px;
+}
+
+.roleBtn {
+  padding: 6px 18px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #637083;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.roleBtn:hover:not(:disabled) {
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.roleBtnActive {
+  font-weight: 700;
+}
+
+/* Reset button */
+.btnReset {
+  height: 38px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btnReset:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+.btnReset:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Gerente / loading notes inside card */
+.gerenteNote {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 13px;
+  color: #637083;
+  font-style: italic;
+}
+
+.loadingNote {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.cardErrorMsg {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .page { padding: 24px 20px; }

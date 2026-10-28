@@ -11,14 +11,123 @@
 }
 
 /* Project header */
+.projectHeaderWrap {
+  position: relative;
+  border-bottom: 1px solid rgba(3, 39, 70, 0.08);
+}
+
 .projectHeader {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 20px 16px;
-  border-bottom: 1px solid rgba(3, 39, 70, 0.08);
   cursor: pointer;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  transition: background 0.12s;
 }
+.projectHeader:hover { background: rgba(2, 33, 78, 0.04); }
+.projectHeaderOpen   { background: rgba(2, 33, 78, 0.06); }
+
+/* Project switcher dropdown */
+.projectDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 8px;
+  right: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 300;
+  overflow: hidden;
+  padding: 6px 0;
+}
+
+.dropdownHeader {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  padding: 6px 14px 4px;
+  text-transform: uppercase;
+}
+
+.dropdownLoading {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  padding: 10px 14px;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.dropdownItem:hover { background: #f8fafc; }
+.dropdownItemActive { background: #f1f5f9; }
+
+.dropdownBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.dropdownName {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdownCheck {
+  color: #6366f1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 6px 0;
+}
+
+.dropdownAllProjects {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6366f1;
+  transition: background 0.1s;
+}
+.dropdownAllProjects:hover { background: #f8fafc; }
 
 .projectBadge {
   width: 36px;
