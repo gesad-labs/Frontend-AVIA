@@ -1,0 +1,83 @@
+name: Deploy status
+
+# Registra no GitHub o ambiente e a versão publicados pelo Dokploy.
+# O deploy em si é feito pelo Dokploy (webhook de push); este workflow só cria o
+# Deployment e acompanha o endereço até ele informar a versão esperada (ambiente-VERSION).
+
+on:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-status-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  HOMOLOG_URL: https://avia-homolog.gesaduece.com.br
+  PRODUCTION_URL: https://avia.gesaduece.com.br
+  HOMOLOG_LINKS: "Aplicação: https://avia-homolog.gesaduece.com.br | API: https://avia-api-homolog.gesaduece.com.br"
+  PRODUCTION_LINKS: "Aplicação: https://avia.gesaduece.com.br | API: https://avia-api.gesaduece.com.br"
+  VERSION_PATH: "/version.json"
+
+jobs:
+  deploy-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Define o ambiente
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            echo "ENVIRONMENT=production" >> "$GITHUB_ENV"
+            echo "ENV_URL=$PRODUCTION_URL" >> "$GITHUB_ENV"
+            echo "ENV_LINKS=$PRODUCTION_LINKS" >> "$GITHUB_ENV"
+            echo "IS_PRODUCTION=true" >> "$GITHUB_ENV"
+          else
+            echo "ENVIRONMENT=homolog" >> "$GITHUB_ENV"
+            echo "ENV_URL=$HOMOLOG_URL" >> "$GITHUB_ENV"
+            echo "ENV_LINKS=$HOMOLOG_LINKS" >> "$GITHUB_ENV"
+            echo "IS_PRODUCTION=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Cria o deployment
+        run: |
+          ID=$(jq -n --arg ref "$GITHUB_SHA" --arg env "$ENVIRONMENT" --argjson prod "$IS_PRODUCTION" \
+            '{ref:$ref, environment:$env, auto_merge:false, required_contexts:[], production_environment:$prod, transient_environment:false, description:"Deploy pelo Dokploy"}' \
+            | gh api "repos/$GITHUB_REPOSITORY/deployments" --input - --jq .id)
+          echo "DEPLOYMENT_ID=$ID" >> "$GITHUB_ENV"
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$ID/statuses" \
+            -f state=in_progress -f description="Aguardando o Dokploy" >/dev/null
+
+      - name: Define a versão esperada
+        run: |
+          VERSION=$(gh api "repos/$GITHUB_REPOSITORY/contents/VERSION?ref=$GITHUB_SHA" --jq .content | base64 -d | tr -d '[:space:]')
+          if [ "$ENVIRONMENT" = "production" ]; then LABEL_ENV=prod; else LABEL_ENV=homolog; fi
+          echo "EXPECTED_LABEL=$LABEL_ENV-$VERSION" >> "$GITHUB_ENV"
+
+      - name: Aguarda a versão esperada no ar
+        id: wait
+        run: |
+          # Dá tempo do Dokploy iniciar o build antes de consultar.
+          sleep 90
+          for i in $(seq 1 60); do
+            label=$(curl -s --max-time 15 "$ENV_URL$VERSION_PATH" | jq -r '.label // empty' 2>/dev/null || true)
+            echo "esperado=$EXPECTED_LABEL atual=${label:-indisponível}"
+            if [ "$label" = "$EXPECTED_LABEL" ]; then echo "state=success" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep 20
+          done
+          echo "state=failure" >> "$GITHUB_OUTPUT"
+
+      - name: Atualiza o status do deployment
+        if: always()
+        run: |
+          STATE="${{ steps.wait.outputs.state }}"
+          [ -n "$STATE" ] || STATE=failure
+          gh api "repos/$GITHUB_REPOSITORY/deployments/$DEPLOYMENT_ID/statuses" \
+            -f state="$STATE" -f environment_url="$ENV_URL" \
+            -f log_url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            -f description="$ENV_LINKS" >/dev/null
