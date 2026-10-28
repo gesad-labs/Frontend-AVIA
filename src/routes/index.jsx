@@ -44,6 +44,8 @@ const router = createBrowserRouter([
       { path: '/signup',           element: <SignupPage /> },
       { path: '/forgot-password',  element: <ForgotPasswordPage /> },
       { path: '/reset-password',   element: <ResetPasswordPage /> },
+      // O link do e-mail de recuperação (back-end) usa este caminho.
+      { path: '/redefinir-senha',  element: <ResetPasswordPage /> },
     ],
   },
 
