@@ -1,4 +1,5 @@
 import { api } from './api'
+import { montarQuery } from '../utils/historicoFiltros'
 
 export const projetoService = {
   // Projetos
@@ -31,6 +32,7 @@ export const projetoService = {
   removerTarefa:     (id, tid)      => api.delete(`/projetos/${id}/tarefas/${tid}`),
   buscarTarefa:      (id, tid)      => api.get(`/projetos/${id}/tarefas/${tid}`),
   listarSubtarefas:  (id, tid)      => api.get(`/projetos/${id}/tarefas/${tid}/subtarefas`),
+  filtrarHistorico:  (id, consulta) => api.get(`/projetos/${id}/tarefas/historico${montarQuery(consulta ?? {})}`),
 
   // Usuário atual
   buscarUsuarioAtual: () => api.get('/usuario/eu'),

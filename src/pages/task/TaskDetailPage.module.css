@@ -820,3 +820,40 @@
 }
 .noticeBox button { background: none; border: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
 .modalError { margin: 0 0 10px; padding: 8px 10px; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; color: #b91c1c; font-size: 12px; font-weight: 600; }
+
+/* ─── Anexos (US025) ─────────────────────────────────────────────── */
+.sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.anexoCount { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 100px; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 700; }
+.sectionAction {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 6px; background: #fff;
+  font-family: inherit; font-size: 12px; font-weight: 700; color: #334155; cursor: pointer;
+}
+.sectionAction:hover { border-color: #6366f1; color: #4338ca; }
+.anexoMeta { display: block; font-size: 11px; color: #64748b; }
+.anexoActions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+.tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid #e2e8f0; }
+.tab {
+  padding: 10px 14px; border: none; border-bottom: 2px solid transparent; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer;
+}
+.tab:hover { color: #0f172a; }
+.tabActive { color: #4338ca; border-bottom-color: #6366f1; }
+
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 120px; padding: 20px; text-align: center;
+  border: 2px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer;
+}
+.dropzone:hover, .dropzone:focus-visible { border-color: #6366f1; background: #f5f3ff; outline: none; }
+.dropzoneActive { border-color: #6366f1; background: #eef2ff; }
+.dropzoneOff { opacity: .55; cursor: not-allowed; }
+.dropzoneTitle { font-size: 13px; color: #0f172a; word-break: break-all; }
+.dropzoneHint { font-size: 12px; color: #64748b; }
+.uploadAviso { margin: 0 0 12px; padding: 8px 10px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; color: #9a3412; font-size: 12px; line-height: 1.4; }
+
+.previewBox { width: min(900px, 94vw); max-height: 92vh; display: flex; flex-direction: column; background: #fff; border-radius: 12px; overflow: hidden; }
+.previewBody { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px; background: #0f172a; overflow: auto; }
+.previewImg { max-width: 100%; max-height: 70vh; object-fit: contain; }
+.previewFooter { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-top: 1px solid #e2e8f0; }

@@ -15,6 +15,11 @@ const IconBacklog = () => (
     <circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
   </svg>
 )
+const IconHistory = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/>
+  </svg>
+)
 const IconMembers = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -71,6 +76,7 @@ export default function Sidebar() {
   const NAV = [
     { to: `/project/${id}/board`,        label: 'Quadro',     Icon: IconBoard },
     { to: `/project/${id}/backlog`,      label: 'Backlog',    Icon: IconBacklog },
+    { to: `/project/${id}/historico`,    label: 'Histórico',  Icon: IconHistory },
     { to: `/project/${id}/members`,      label: 'Membros',    Icon: IconMembers },
     { to: `/project/${id}/permissions`,  label: 'Permissões', Icon: IconPermissions },
   ];
