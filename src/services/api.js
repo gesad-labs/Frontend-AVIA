@@ -7,7 +7,7 @@
    allowing origin http://localhost:5173.
    ─────────────────────────────────────────────────────────────────── */
 
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 const TOKEN_KEY = 'avia_token'
 
 /* ── Token helpers ── */

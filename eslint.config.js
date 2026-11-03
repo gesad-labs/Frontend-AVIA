@@ -17,5 +17,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Regra só de DX (fast refresh); os contextos exportam hooks junto do provider.
+      'react-refresh/only-export-components': 'warn',
+    },
   },
 ])
