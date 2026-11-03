@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
+import { useAuth } from '../../hooks/useAuth'
+import { montarTipoArquivo } from '../../utils/anexos'
 import styles from './CardFormPage.module.css'
 
 const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
@@ -25,6 +27,7 @@ export default function EditCardPage() {
   const [responsavelId, setResponsavelId] = useState('')
   const [membros,      setMembros]     = useState([])
   const [projeto,      setProjeto]     = useState(null)
+  const { user } = useAuth()
   const [linkUrl,      setLinkUrl]     = useState('')
   const [linkNome,     setLinkNome]    = useState('')
   const [saving,       setSaving]      = useState(false)
@@ -69,7 +72,7 @@ export default function EditCardPage() {
       if (linkUrl.trim()) {
         await projetoService.adicionarAnexo(projectId, tarefaId, {
           nome:        linkNome.trim() || linkUrl.trim(),
-          tipoArquivo: 'link',
+          tipoArquivo: montarTipoArquivo({ categoria: 'link', autor: user?.name, emISO: new Date().toISOString() }),
           url:         linkUrl.trim(),
         }).catch(() => {})
       }

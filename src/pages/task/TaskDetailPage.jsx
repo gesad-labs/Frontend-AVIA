@@ -4,6 +4,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
 import { getErrorMessage } from '../../utils/errors'
+import { enviarArquivo, uploadConfigurado } from '../../services/uploadService'
+import {
+  ACCEPT_ARQUIVOS, TAMANHO_MAXIMO, baixarAnexo, categoriaDoArquivo, formatarDataHora,
+  formatarTamanho, lerAnexo, montarTipoArquivo, urlSegura, validarArquivo,
+} from '../../utils/anexos'
 import styles from './TaskDetailPage.module.css'
 
 /* ─── Constants ─────────────────────────────────────────────────────── */
@@ -95,6 +100,12 @@ const IconDownload = () => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
   </svg>
 )
+const IconEye = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+)
+
 const IconX = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -179,52 +190,179 @@ function SideDropdown({ options, value, onChange, renderTrigger }) {
   )
 }
 
-/* ─── Modal: Adicionar Anexo ─────────────────────────────────────────── */
-function AnexarModal({ onClose, onAdd }) {
-  const [nome, setNome] = useState('')
-  const [url,  setUrl]  = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err,  setErr]  = useState('')
+/* ─── Modal: Adicionar Anexo (arquivo ou link) ─────────────────────── */
+function AnexarModal({ onClose, onAdd, autor }) {
+  const [aba,       setAba]       = useState(uploadConfigurado ? 'arquivo' : 'link')
+  const [file,      setFile]      = useState(null)
+  const [arrastando, setArrastando] = useState(false)
+  const [nome,      setNome]      = useState('')
+  const [url,       setUrl]       = useState('')
+  const [busy,      setBusy]      = useState(false)
+  const [err,       setErr]       = useState('')
+  const inputRef = useRef(null)
+
+  function escolher(f) {
+    setErr('')
+    const problema = validarArquivo(f)
+    if (problema) { setFile(null); setErr(problema); return }
+    setFile(f)
+  }
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    e.preventDefault(); setErr('')
+
+    if (aba === 'arquivo') {
+      const problema = validarArquivo(file)
+      if (problema) { setErr(problema); return }
+      setBusy(true)
+      try {
+        const { url: urlArquivo } = await enviarArquivo(file)
+        await onAdd({
+          nome: file.name.slice(0, 255),
+          tipoArquivo: montarTipoArquivo({
+            categoria: categoriaDoArquivo(file), autor, emISO: new Date().toISOString(), tamanho: file.size,
+          }),
+          url: urlArquivo,
+        })
+        onClose()
+      } catch (e2) {
+        // e2.status existe quando o erro veio da API do AVIA; senão veio do envio do arquivo.
+        setErr(e2?.status != null
+          ? getErrorMessage(e2, 'Não foi possível registrar o anexo.')
+          : (e2?.message || 'Não foi possível enviar o arquivo.'))
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
     if (!nome.trim() || !url.trim()) { setErr('Preencha todos os campos.'); return }
-    setBusy(true); setErr('')
+    if (!urlSegura(url)) { setErr('Informe um link válido, começando com http:// ou https://.'); return }
+    setBusy(true)
     try {
-      await onAdd({ nome: nome.trim(), tipoArquivo: 'link', url: url.trim() })
+      await onAdd({
+        nome: nome.trim(),
+        tipoArquivo: montarTipoArquivo({ categoria: 'link', autor, emISO: new Date().toISOString() }),
+        url: url.trim(),
+      })
       onClose()
-    } catch {
-      setErr('Erro ao adicionar link.')
+    } catch (e2) {
+      setErr(getErrorMessage(e2, 'Não foi possível adicionar o link.'))
     } finally {
       setBusy(false)
     }
   }
 
+  const semUpload = aba === 'arquivo' && !uploadConfigurado
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Adicionar Link</h3>
-          <button type="button" className={styles.modalClose} onClick={onClose}><IconX /></button>
+          <h3 className={styles.modalTitle}>Adicionar anexo</h3>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><IconX /></button>
         </div>
+
+        <div className={styles.tabs} role="tablist">
+          <button type="button" role="tab" aria-selected={aba === 'arquivo'}
+            className={`${styles.tab} ${aba === 'arquivo' ? styles.tabActive : ''}`}
+            onClick={() => { setAba('arquivo'); setErr('') }}>Arquivo</button>
+          <button type="button" role="tab" aria-selected={aba === 'link'}
+            className={`${styles.tab} ${aba === 'link' ? styles.tabActive : ''}`}
+            onClick={() => { setAba('link'); setErr('') }}>Link</button>
+        </div>
+
         <form onSubmit={handleSubmit} className={styles.modalBody}>
-          <label className={styles.fieldLabel}>Nome</label>
-          <input className={styles.fieldInput} value={nome} onChange={e => setNome(e.target.value)}
-            placeholder="ex: Documento de requisitos" autoFocus />
-          <label className={styles.fieldLabel} style={{ marginTop: 14 }}>URL / Link</label>
-          <input className={styles.fieldInput} value={url} onChange={e => setUrl(e.target.value)}
-            placeholder="https://..." />
-          {err && <p className={styles.fieldErr}>{err}</p>}
+          {aba === 'arquivo' ? (
+            <>
+              {!uploadConfigurado && (
+                <p className={styles.uploadAviso} role="note">
+                  O envio de arquivos ainda não foi configurado neste ambiente
+                  (veja <code>.env.example</code>). Enquanto isso, use a aba Link.
+                </p>
+              )}
+              <div
+                className={`${styles.dropzone} ${arrastando ? styles.dropzoneActive : ''} ${!uploadConfigurado ? styles.dropzoneOff : ''}`}
+                role="button" tabIndex={0} aria-label="Escolher arquivo"
+                onClick={() => uploadConfigurado && inputRef.current?.click()}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && uploadConfigurado) { e.preventDefault(); inputRef.current?.click() } }}
+                onDragOver={e => { e.preventDefault(); if (uploadConfigurado) setArrastando(true) }}
+                onDragLeave={() => setArrastando(false)}
+                onDrop={e => { e.preventDefault(); setArrastando(false); if (uploadConfigurado) escolher(e.dataTransfer.files?.[0]) }}
+              >
+                {file ? (
+                  <>
+                    <strong className={styles.dropzoneTitle}>{file.name}</strong>
+                    <span className={styles.dropzoneHint}>{formatarTamanho(file.size)} · clique para trocar</span>
+                  </>
+                ) : (
+                  <>
+                    <strong className={styles.dropzoneTitle}>Arraste um arquivo aqui</strong>
+                    <span className={styles.dropzoneHint}>ou clique para escolher · até {formatarTamanho(TAMANHO_MAXIMO)}</span>
+                  </>
+                )}
+                <input ref={inputRef} type="file" hidden accept={ACCEPT_ARQUIVOS} data-testid="anexo-input"
+                  onChange={e => { escolher(e.target.files?.[0]); e.target.value = '' }} />
+              </div>
+            </>
+          ) : (
+            <>
+              <label className={styles.fieldLabel}>Nome</label>
+              <input className={styles.fieldInput} value={nome} onChange={e => setNome(e.target.value)}
+                placeholder="ex: Documento de requisitos" autoFocus />
+              <label className={styles.fieldLabel} style={{ marginTop: 14 }}>URL / Link</label>
+              <input className={styles.fieldInput} value={url} onChange={e => setUrl(e.target.value)}
+                placeholder="https://..." />
+            </>
+          )}
+          {err && <p className={styles.fieldErr} role="alert">{err}</p>}
           <div className={styles.modalFooter}>
             <button type="button" className={styles.btnSecondary} onClick={onClose}>Cancelar</button>
-            <button type="submit" className={styles.btnPrimary} disabled={busy}>
-              {busy ? 'Adicionando...' : 'Adicionar'}
+            <button type="submit" className={styles.btnPrimary} disabled={busy || semUpload || (aba === 'arquivo' && !file)}>
+              {busy ? (aba === 'arquivo' ? 'Enviando...' : 'Adicionando...') : 'Adicionar'}
             </button>
           </div>
         </form>
       </div>
     </div>
   )
+}
+
+/* ─── Visualização de imagem anexada ─────────────────────────────────── */
+function AnexoPreview({ anexo, onClose }) {
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true" aria-label={`Visualizar ${anexo.nome}`}>
+      <div className={styles.previewBox} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h3 className={styles.modalTitle}>{anexo.nome}</h3>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><IconX /></button>
+        </div>
+        <div className={styles.previewBody}>
+          <img src={anexo.url} alt={anexo.nome} className={styles.previewImg} />
+        </div>
+        <div className={styles.previewFooter}>
+          <span className={styles.anexoMeta}>{metaDoAnexo(anexo)}</span>
+          <button type="button" className={styles.btnSecondary} onClick={() => baixarAnexo(anexo)}>
+            <IconDownload /> Baixar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* "Enviado por Ana · 03/11/2026 às 10:04 · 48 KB" — ou aviso para anexos antigos */
+function metaDoAnexo(a) {
+  const quem = a.autor ? `Enviado por ${a.autor}` : (a.enviadoEm ? 'Enviado' : '')
+  const quando = a.enviadoEm ? formatarDataHora(a.enviadoEm) : ''
+  const base = [quem, quando].filter(Boolean).join(' · ') || 'Autor e data não registrados'
+  return a.tamanho != null ? `${base} · ${formatarTamanho(a.tamanho)}` : base
 }
 
 /* ─── Modal: Vincular Tarefa ─────────────────────────────────────────── */
@@ -336,6 +474,8 @@ export default function TaskDetailPage() {
   const [notice,    setNotice]    = useState('')
   const [novoSubTitulo, setNovoSubTitulo] = useState('')
   const [criandoSub,  setCriandoSub]  = useState(false)
+  const [preview,    setPreview]    = useState(null)
+  const [anexoErro,  setAnexoErro]  = useState('')
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
 
@@ -568,9 +708,15 @@ export default function TaskDetailPage() {
     setAnexos(prev => [...prev, a])
   }
 
-  async function removeAnexo(anexoId) {
-    await projetoService.removerAnexo(projectId, taskId, anexoId)
-    setAnexos(prev => prev.filter(a => a.id !== anexoId))
+  async function removeAnexo(anexo) {
+    if (!window.confirm(`Remover o anexo "${anexo.nome}"?`)) return
+    setAnexoErro('')
+    try {
+      await projetoService.removerAnexo(projectId, taskId, anexo.id)
+      setAnexos(prev => prev.filter(a => a.id !== anexo.id))
+    } catch (err) {
+      setAnexoErro(getErrorMessage(err, 'Não foi possível remover o anexo.'))
+    }
   }
 
   /* ── Guards ── */
@@ -591,6 +737,7 @@ export default function TaskDetailPage() {
 
   const statusMeta    = STATUS_COLORS[tarefa.status]    || STATUS_COLORS.A_FAZER
   const subcardsConcluidos = subcards.filter(s => s.status === 'CONCLUIDA').length
+  const anexosInfo     = anexos.map(lerAnexo)
   const ehSubcard      = tarefa.tarefaParenteId != null
   const predecessora   = tarefa.bloqueadaPorId != null
     ? todasTarefas.find(x => x.id === tarefa.bloqueadaPorId) ?? null
@@ -687,32 +834,61 @@ export default function TaskDetailPage() {
         </section>
 
         {/* Anexos */}
-        {anexos.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Anexos</h2>
+        <section className={styles.section} aria-labelledby="anexos-titulo">
+          <div className={styles.sectionHead}>
+            <h2 id="anexos-titulo" className={styles.sectionTitle}>
+              Anexos {anexosInfo.length > 0 && <span className={styles.anexoCount}>{anexosInfo.length}</span>}
+            </h2>
+            <button type="button" className={styles.sectionAction} onClick={() => setShowAnexar(true)}>
+              <IconPlus /> Adicionar anexo
+            </button>
+          </div>
+          {anexoErro && <p className={styles.fieldErr} role="alert">{anexoErro}</p>}
+          {anexosInfo.length === 0 ? (
+            <p className={styles.descEmpty}>Nenhum anexo neste card ainda.</p>
+          ) : (
             <div className={styles.anexosList}>
-              {anexos.map(a => (
+              {anexosInfo.map(a => (
                 <div key={a.id} className={styles.anexoItem}>
                   <div className={styles.anexoThumb}>
-                    {a.tipoArquivo === 'imagem'
-                      ? <img src={a.url} alt={a.nome} className={styles.anexoImg} />
-                      : <span className={styles.anexoIcon}>📎</span>
-                    }
+                    {a.ehImagem && a.urlValida
+                      ? <img src={a.url} alt="" className={styles.anexoImg} />
+                      : <span className={styles.anexoIcon}>{a.ehLink ? '🔗' : a.ehPdf ? '📄' : '📎'}</span>}
                   </div>
                   <div className={styles.anexoInfo}>
-                    <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.anexoNomeLink}>
-                      {a.nome}
-                    </a>
-                    {a.url && <span className={styles.anexoUrl}>{a.url}</span>}
+                    {a.urlValida ? (
+                      <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.anexoNomeLink}
+                        onClick={e => { if (a.ehImagem) { e.preventDefault(); setPreview(a) } }}>
+                        {a.nome}
+                      </a>
+                    ) : (
+                      <span className={styles.anexoNome} title="Link inválido">{a.nome}</span>
+                    )}
+                    <span className={styles.anexoMeta}>{metaDoAnexo(a)}</span>
                   </div>
-                  <button className={styles.anexoAction} title="Remover" onClick={() => removeAnexo(a.id)}>
-                    <IconX />
-                  </button>
+                  <div className={styles.anexoActions}>
+                    {a.urlValida && (
+                      <button type="button" className={styles.anexoAction} title="Visualizar" aria-label={`Visualizar ${a.nome}`}
+                        onClick={() => (a.ehImagem ? setPreview(a) : window.open(a.url, '_blank', 'noopener,noreferrer'))}>
+                        <IconEye />
+                      </button>
+                    )}
+                    {a.urlValida && !a.ehLink && (
+                      <button type="button" className={styles.anexoAction} title="Baixar" aria-label={`Baixar ${a.nome}`}
+                        onClick={() => baixarAnexo(a)}>
+                        <IconDownload />
+                      </button>
+                    )}
+                    <button type="button" className={styles.anexoAction} title="Remover" aria-label={`Remover ${a.nome}`}
+                      onClick={() => removeAnexo(a)}>
+                      <IconX />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Atividade / Comentários */}
         <section className={styles.section}>
@@ -1068,8 +1244,9 @@ export default function TaskDetailPage() {
 
       {/* ─── Modals ─── */}
       {showAnexar && (
-        <AnexarModal onClose={() => setShowAnexar(false)} onAdd={addAnexo} />
+        <AnexarModal onClose={() => setShowAnexar(false)} onAdd={addAnexo} autor={user?.name} />
       )}
+      {preview && <AnexoPreview anexo={preview} onClose={() => setPreview(null)} />}
       {showVincular && (
         <VincularModal
           projectId={projectId}

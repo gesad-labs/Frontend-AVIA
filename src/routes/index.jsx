@@ -21,6 +21,7 @@ import ProjectsPage from '../pages/projects/ProjectsPage';
 import ProjectPage from '../pages/project/ProjectPage';
 import BoardPage from '../pages/board/BoardPage';
 import BacklogPage from '../pages/backlog/BacklogPage';
+import HistoryPage from '../pages/history/HistoryPage';
 import CreateCardPage from '../pages/card/CreateCardPage';
 import EditCardPage from '../pages/card/EditCardPage';
 import SettingsPage from '../pages/settings/SettingsPage';
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
       { path: '/project/:projectId',          element: <ProjectPage /> },
       { path: '/project/:projectId/board',    element: <BoardPage /> },
       { path: '/project/:projectId/backlog',  element: <BacklogPage /> },
+      { path: '/project/:projectId/historico', element: <HistoryPage /> },
       { path: '/project/:projectId/settings',     element: <SettingsPage /> },
       { path: '/project/:projectId/permissions',       element: <PermissionsPage /> },
       { path: '/project/:projectId/permissions/view', element: <ViewPermissionsPage /> },
