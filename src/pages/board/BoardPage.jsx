@@ -629,7 +629,7 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
 }
 
 /* ── Card context menu ── */
-function CardMenu({ tarefa, onDetail, onEdit, onDelete, canEdit, canDelete }) {
+function CardMenu({ onDetail, onEdit, onDelete, canEdit, canDelete }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -974,6 +974,7 @@ export default function BoardPage() {
     }
   }, [projectId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchAll() }, [fetchAll])
 
   /* Regras (subcards pendentes, bloqueio por predecessor) são validadas no back;
