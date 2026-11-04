@@ -58,10 +58,6 @@ function renderCommentText(text, membros = []) {
   )
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 function fmtRelative(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -494,7 +490,8 @@ export default function TaskDetailPage() {
   const [membrosOpen,   setMembrosOpen]   = useState(false)
   const [mentionQuery,  setMentionQuery]  = useState(null)
   const membrosRef  = useRef(null)
-  const commentRef  = useRef(null)
+  // O campo de comentário fica em estado (ref de callback): evita ler ref durante a renderização.
+  const [commentEl, setCommentEl] = useState(null)
 
   /* Load everything */
   const fetchAll = useCallback(async () => {
@@ -526,6 +523,7 @@ export default function TaskDetailPage() {
     }
   }, [projectId, taskId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchAll() }, [fetchAll])
 
   /* Close membros dropdown on outside click */
@@ -677,7 +675,7 @@ export default function TaskDetailPage() {
   }
 
   function insertMention(membro) {
-    const el     = commentRef.current
+    const el     = commentEl
     const cursor = el ? el.selectionStart : newComment.length
     const before = newComment.slice(0, cursor)
     const after  = newComment.slice(cursor)
@@ -735,7 +733,6 @@ export default function TaskDetailPage() {
     )
   }
 
-  const statusMeta    = STATUS_COLORS[tarefa.status]    || STATUS_COLORS.A_FAZER
   const subcardsConcluidos = subcards.filter(s => s.status === 'CONCLUIDA').length
   const anexosInfo     = anexos.map(lerAnexo)
   const ehSubcard      = tarefa.tarefaParenteId != null
@@ -749,7 +746,6 @@ export default function TaskDetailPage() {
     x.tarefaParenteId !== tarefa.id &&
     x.id !== tarefa.bloqueadaPorId
   )
-  const prioridadeMeta = tarefa.prioridade ? PRIORIDADE_COLORS[tarefa.prioridade] : null
 
   return (
     <div className={styles.page}>
@@ -901,7 +897,7 @@ export default function TaskDetailPage() {
             </div>
             <div className={styles.commentBox}>
               <textarea
-                ref={commentRef}
+                ref={setCommentEl}
                 className={styles.commentInput}
                 value={newComment}
                 onChange={handleCommentChange}

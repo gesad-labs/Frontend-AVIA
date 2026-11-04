@@ -95,6 +95,7 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
   /* Load actual permissions on first expand (skip for Gerentes — they have all) */
   useEffect(() => {
     if (!expanded || apiPerms !== null || isGerente) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
     setCardStatus('loading')
     setCardError('')
     projetoService.buscarPermissoesMembro(projectId, membro.id)
@@ -267,6 +268,7 @@ export default function PermissionsPage() {
     }
   }, [projectId, user?.email])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchMembros() }, [fetchMembros])
 
   /* Redirect non-gerentes to view-only page */

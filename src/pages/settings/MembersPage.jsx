@@ -416,6 +416,7 @@ export default function MembersPage() {
     }
   }, [projectId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchMembros() }, [fetchMembros])
 
   async function handleRemove(email) {

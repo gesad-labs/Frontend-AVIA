@@ -164,12 +164,6 @@ function saveStatus(id, status) {
 }
 
 /* ── Role icons for step 2 ── */
-const GerIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" /><circle cx="17" cy="21" r="3" /><path d="M17 18v-1" /><path d="M17 24v-1" /><path d="M20 21h-1" /><path d="M14 21h1" />
-  </svg>
-)
 const MemIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
@@ -426,7 +420,7 @@ const STATUS_OPTIONS = [
   { label: 'Concluído',    Icon: CheckCircleIcon },
 ]
 
-function CardMenu({ projetoId, projetoNome, onClose, onStatusChange, onSair }) {
+function CardMenu({ projetoId, onClose, onStatusChange, onSair }) {
   const navigate = useNavigate()
   const [showStatus, setShowStatus] = useState(false)
   const ref = useRef(null)
@@ -647,6 +641,7 @@ export default function ProjectsPage() {
     finally { setLoading(false) }
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchProjetos() }, [fetchProjetos])
 
   const filtered = projetos.filter(p => {
