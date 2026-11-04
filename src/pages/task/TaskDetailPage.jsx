@@ -53,10 +53,6 @@ function renderCommentText(text, membros = []) {
   )
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 function fmtRelative(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -88,11 +84,6 @@ const IconPoker = () => (
     <rect x="2" y="4" width="14" height="18" rx="2"/>
     <path d="M8 9h2"/><path d="M8 13h4"/><path d="M8 17h2"/>
     <path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>
-  </svg>
-)
-const IconDownload = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
   </svg>
 )
 const IconX = () => (
@@ -354,7 +345,8 @@ export default function TaskDetailPage() {
   const [membrosOpen,   setMembrosOpen]   = useState(false)
   const [mentionQuery,  setMentionQuery]  = useState(null)
   const membrosRef  = useRef(null)
-  const commentRef  = useRef(null)
+  // O campo de comentário fica em estado (ref de callback): evita ler ref durante a renderização.
+  const [commentEl, setCommentEl] = useState(null)
 
   /* Load everything */
   const fetchAll = useCallback(async () => {
@@ -386,6 +378,7 @@ export default function TaskDetailPage() {
     }
   }, [projectId, taskId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchAll() }, [fetchAll])
 
   /* Close membros dropdown on outside click */
@@ -537,7 +530,7 @@ export default function TaskDetailPage() {
   }
 
   function insertMention(membro) {
-    const el     = commentRef.current
+    const el     = commentEl
     const cursor = el ? el.selectionStart : newComment.length
     const before = newComment.slice(0, cursor)
     const after  = newComment.slice(cursor)
@@ -589,7 +582,6 @@ export default function TaskDetailPage() {
     )
   }
 
-  const statusMeta    = STATUS_COLORS[tarefa.status]    || STATUS_COLORS.A_FAZER
   const subcardsConcluidos = subcards.filter(s => s.status === 'CONCLUIDA').length
   const ehSubcard      = tarefa.tarefaParenteId != null
   const predecessora   = tarefa.bloqueadaPorId != null
@@ -602,7 +594,6 @@ export default function TaskDetailPage() {
     x.tarefaParenteId !== tarefa.id &&
     x.id !== tarefa.bloqueadaPorId
   )
-  const prioridadeMeta = tarefa.prioridade ? PRIORIDADE_COLORS[tarefa.prioridade] : null
 
   return (
     <div className={styles.page}>
@@ -725,7 +716,7 @@ export default function TaskDetailPage() {
             </div>
             <div className={styles.commentBox}>
               <textarea
-                ref={commentRef}
+                ref={setCommentEl}
                 className={styles.commentInput}
                 value={newComment}
                 onChange={handleCommentChange}

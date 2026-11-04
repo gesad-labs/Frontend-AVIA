@@ -7,7 +7,7 @@ export function useNotificacoes(projetoId) {
 
   // Initial REST fetch
   useEffect(() => {
-    if (!projetoId) { setNotificacoes([]); return }
+    if (!projetoId) return
     api.get(`/projetos/${projetoId}/notificacoes`)
       .then(data => setNotificacoes(Array.isArray(data) ? data : []))
       .catch(err => console.error('[useNotificacoes] REST fetch falhou:', err))
@@ -27,7 +27,7 @@ export function useNotificacoes(projetoId) {
             try {
               const notif = JSON.parse(msg.body)
               setNotificacoes(prev => [notif, ...prev])
-            } catch {}
+            } catch { /* mensagem malformada: ignora */ }
           }
         )
       },
@@ -42,10 +42,12 @@ export function useNotificacoes(projetoId) {
       setNotificacoes(prev =>
         prev.map(n => n.id === notifId ? { ...n, lida: true } : n)
       )
-    } catch {}
+    } catch { /* falha ao marcar como lida: mantém o estado atual */ }
   }, [projetoId])
 
-  const unreadCount = notificacoes.filter(n => !n.lida).length
+  // Sem projeto selecionado não há notificações (derivado, sem setState no efeito).
+  const lista = projetoId ? notificacoes : []
+  const unreadCount = lista.filter(n => !n.lida).length
 
-  return { notificacoes, unreadCount, marcarLida }
-}
+  return { notificacoes: lista, unreadCount, marcarLida }
+} 
