@@ -67,6 +67,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (!projectId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
     setCurrentProject(null);
     projetoService.buscar(projectId)
       .then(data => setCurrentProject(data))
