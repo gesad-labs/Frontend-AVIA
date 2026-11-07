@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
 import LeaveProjectModal from '../../components/project/LeaveProjectModal'
+import { loadSavedStatuses, saveStatus, removeSavedStatus, lerArquivados } from '../../utils/projetoStatus'
 import styles from './ProjectsPage.module.css'
 
 /* ── Icons ── */
@@ -139,29 +140,8 @@ function avatarColor(seed) {
   return AVATAR_COLORS[h % AVATAR_COLORS.length]
 }
 
-const FILTERS = ['Todos', 'Em Andamento', 'Concluídos', 'Planejamento']
+const FILTERS = ['Todos', 'Em Andamento', 'Concluídos', 'Planejamento', 'Arquivados']
 const PAGE_SIZE = 8
-
-/* ── Project status persistence (localStorage) ── */
-const STATUS_LS_KEY = 'avia_project_statuses'
-function loadSavedStatuses() {
-  try { return JSON.parse(localStorage.getItem(STATUS_LS_KEY) || '{}') }
-  catch { return {} }
-}
-function removeSavedStatus(id) {
-  try {
-    const saved = loadSavedStatuses()
-    delete saved[String(id)]
-    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
-  } catch { /* ignore quota/parse errors */ }
-}
-function saveStatus(id, status) {
-  try {
-    const saved = loadSavedStatuses()
-    saved[String(id)] = status
-    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
-  } catch { /* ignore quota/parse errors */ }
-}
 
 /* ── Role icons for step 2 ── */
 const MemIcon = () => (
@@ -505,7 +485,7 @@ function ProjectListRow({ projeto, onStatusChange, onSair }) {
       </div>
       <div className={styles.listRowMeta}>
         <span className={`${styles.listStatusBadge} ${status === 'PLANEJAMENTO' ? styles.listStatusPlanning : status === 'CONCLUÍDO' ? styles.listStatusDone : styles.listStatusActive}`}>
-          {status === 'EM ANDAMENTO' ? 'Em andamento' : status === 'PLANEJAMENTO' ? 'Planejamento' : 'Concluído'}
+          {projeto._arquivado ? 'Arquivado' : status === 'EM ANDAMENTO' ? 'Em andamento' : status === 'PLANEJAMENTO' ? 'Planejamento' : 'Concluído'}
         </span>
         <span className={styles.listBadge}>{projeto.tipoEstimativa}</span>
       </div>
@@ -545,7 +525,7 @@ function ProjectCard({ projeto, onStatusChange, onSair }) {
     <div className={`${styles.card} ${menuOpen ? styles.cardMenuActive : ''}`} onClick={() => navigate(`/project/${projeto.id}`)}>
       <div className={styles.cardHeader} style={{ background: bg }}>
         <span className={`${styles.statusBadge} ${status === 'PLANEJAMENTO' ? styles.statusPlanning : status === 'CONCLUÍDO' ? styles.statusDone : ''}`}>
-          {status}
+          {projeto._arquivado ? 'ARQUIVADO' : status}
         </span>
         <span className={styles.cardIcon}><Icon /></span>
       </div>
@@ -635,7 +615,12 @@ export default function ProjectsPage() {
     try {
       const data = await projetoService.listar()
       const saved = loadSavedStatuses()
-      setProjetos(data.map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p))
+      const arquivados = lerArquivados()
+      setProjetos(data.map(p => ({
+        ...p,
+        ...(saved[String(p.id)] ? { _status: saved[String(p.id)] } : {}),
+        ...(arquivados[String(p.id)] ? { _arquivado: true } : {}),
+      })))
     }
     catch { setError('Erro ao carregar projetos.') }
     finally { setLoading(false) }
@@ -646,7 +631,9 @@ export default function ProjectsPage() {
 
   const filtered = projetos.filter(p => {
     const matchQuery = p.nome.toLowerCase().includes(query.toLowerCase())
-    const matchFilter = filter === 'Todos'
+    const matchFilter = filter === 'Arquivados' ? Boolean(p._arquivado)
+      : p._arquivado ? false
+      : filter === 'Todos'
       || (filter === 'Em Andamento'  && (p._status || 'EM ANDAMENTO') === 'EM ANDAMENTO')
       || (filter === 'Planejamento'  && p._status === 'PLANEJAMENTO')
       || (filter === 'Concluídos'    && p._status === 'CONCLUÍDO')
