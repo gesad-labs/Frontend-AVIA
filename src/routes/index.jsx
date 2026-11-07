@@ -17,14 +17,19 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
 // Pages — App
-import DashboardPage from '../pages/dashboard/DashboardPage';
+import ProjectsPage from '../pages/projects/ProjectsPage';
 import ProjectPage from '../pages/project/ProjectPage';
 import BoardPage from '../pages/board/BoardPage';
 import BacklogPage from '../pages/backlog/BacklogPage';
+import HistoryPage from '../pages/history/HistoryPage';
+import CreateCardPage from '../pages/card/CreateCardPage';
+import EditCardPage from '../pages/card/EditCardPage';
 import SettingsPage from '../pages/settings/SettingsPage';
 import PermissionsPage from '../pages/settings/PermissionsPage';
 import ViewPermissionsPage from '../pages/settings/ViewPermissionsPage';
-import MembersPage from '../pages/settings/MembersPage';
+import MembersPage from '../pages/settings/MembersPage'
+import PlanningPokerPage from '../pages/planningPoker/PlanningPokerPage';
+import TaskDetailPage from '../pages/task/TaskDetailPage';
 
 // Guards
 import PrivateRoute from './PrivateRoute';
@@ -44,7 +49,6 @@ const router = createBrowserRouter([
       { path: '/signup',           element: <SignupPage /> },
       { path: '/forgot-password',  element: <ForgotPasswordPage /> },
       { path: '/reset-password',   element: <ResetPasswordPage /> },
-      // O link do e-mail de recuperação (back-end) usa este caminho.
       { path: '/redefinir-senha',  element: <ResetPasswordPage /> },
     ],
   },
@@ -53,14 +57,20 @@ const router = createBrowserRouter([
   {
     element: <PrivateRoute><AppLayout /></PrivateRoute>,
     children: [
-      { path: '/dashboard',                   element: <DashboardPage /> },
+      { path: '/dashboard',                   element: <Navigate to="/projects" replace /> },
+      { path: '/projects',                    element: <ProjectsPage /> },
       { path: '/project/:projectId',          element: <ProjectPage /> },
       { path: '/project/:projectId/board',    element: <BoardPage /> },
       { path: '/project/:projectId/backlog',  element: <BacklogPage /> },
+      { path: '/project/:projectId/historico', element: <HistoryPage /> },
       { path: '/project/:projectId/settings',     element: <SettingsPage /> },
       { path: '/project/:projectId/permissions',       element: <PermissionsPage /> },
       { path: '/project/:projectId/permissions/view', element: <ViewPermissionsPage /> },
       { path: '/project/:projectId/members',      element: <MembersPage /> },
+      { path: '/project/:projectId/card/new',               element: <CreateCardPage /> },
+      { path: '/project/:projectId/card/:tarefaId/edit',   element: <EditCardPage /> },
+      { path: '/project/:projectId/planning-poker/:taskId', element: <PlanningPokerPage /> },
+      { path: '/project/:projectId/task/:taskId',          element: <TaskDetailPage /> },
     ],
   },
 
