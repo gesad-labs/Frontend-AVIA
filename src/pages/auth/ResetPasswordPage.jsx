@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../services/api'
+import { temEspecialAceito } from '../../utils/senha'
 import styles from './ResetPasswordPage.module.css'
 
 const EyeIcon = ({ open }) => open ? (
@@ -33,7 +34,7 @@ export default function ResetPasswordPage() {
     { label: 'Mínimo de 8 caracteres',   met: form.password.length >= 8 },
     { label: 'Uma letra maiúscula',       met: /[A-Z]/.test(form.password) },
     { label: 'Um número',                 met: /\d/.test(form.password) },
-    { label: 'Um caractere especial',     met: /[^A-Za-z0-9]/.test(form.password) },
+    { label: 'Um caractere especial (ex.: ! @ # $ %)', met: temEspecialAceito(form.password) },
   ]
 
   function handleChange(e) {
