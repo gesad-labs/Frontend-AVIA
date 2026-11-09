@@ -1,44 +1,30 @@
 /* ── Anexos de cards (US025) ──────────────────────────────────────────
-   O back guarda por anexo apenas { id, tarefaId, nome, tipoArquivo, url }:
-   NÃO tem autor nem data de upload. Para exibi-los sem mexer no back, o front
-   grava esses metadados DENTRO de `tipoArquivo` (texto livre que o back não
-   interpreta), neste formato:
+   Contrato do back (AnexosController):
+     POST   .../anexos            multipart/form-data, campo "arquivo"  → AnexoResponseDTO
+     GET    .../anexos            → AnexoResponseDTO[]
+     GET    .../anexos/{id}/download   (exige token)  → arquivo
+     DELETE .../anexos/{id}       (só gerente ou quem enviou)
 
-       <categoria>;autor=<nome codificado>;em=<ISO-8601>;tam=<bytes>
-       ex.: imagem;autor=Ana%20Silva;em=2026-11-03T13:04:05.000Z;tam=48213
+   AnexoResponseDTO: { id, tarefaId, tipoAnexo, tamanhoBytes, criadoEm,
+                       nomeArquivo, nomeUsuario, podeRemover }
 
-   • A 1ª parte continua sendo a categoria simples ('imagem', 'documento',
-     'link', 'arquivo'), então telas antigas que comparam `tipoArquivo === 'imagem'`
-     seguem funcionando.
-   • Anexos antigos (tipoArquivo = 'link') continuam válidos: aparecem sem autor/data.
-   • Quando o back passar a devolver autor/data de verdade (autorNome / criadoEm),
-     lerAnexo() já dá preferência a eles.
-   ATENÇÃO: autor e data são informados pelo cliente — servem para exibição, não
-   para auditoria. Auditoria confiável exige gravar no back.
+   Regras do back: até 25 MB; só PDF, PNG, JPEG e DOCX. O tipo é conferido pelo
+   CONTEÚDO do arquivo (não pela extensão), então a checagem do front abaixo é só
+   um atalho para avisar antes do envio — quem decide é o back.
    ─────────────────────────────────────────────────────────────────── */
+import { getErrorMessage } from './errors'
 
-export const TAMANHO_MAXIMO = 10 * 1024 * 1024 // 10 MB
-const LIMITE_TIPO_ARQUIVO = 250                // coluna do back tem 255 caracteres
+export const TAMANHO_MAXIMO = 25 * 1024 * 1024 // 25 MB (igual ao ArquivoValidator do back)
 
-const EXT_IMAGEM = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp']
-const EXT_DOCUMENTO = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'md', 'rtf', 'odt', 'ods']
-const EXT_OUTROS_PERMITIDOS = ['zip', 'json']
-const EXT_PERMITIDAS = [...EXT_IMAGEM, ...EXT_DOCUMENTO, ...EXT_OUTROS_PERMITIDOS]
+const EXT_PERMITIDAS = ['pdf', 'png', 'jpg', 'jpeg', 'docx']
 
 /* Atributo `accept` do <input type="file"> */
 export const ACCEPT_ARQUIVOS = EXT_PERMITIDAS.map(e => `.${e}`).join(',')
+export const TIPOS_LEGIVEIS = 'PDF, PNG, JPG ou DOCX'
 
-export function extensaoDe(nomeOuUrl = '') {
-  const limpo = String(nomeOuUrl).split(/[?#]/)[0]
-  const i = limpo.lastIndexOf('.')
-  return i >= 0 ? limpo.slice(i + 1).toLowerCase() : ''
-}
-
-export function categoriaDoArquivo(file) {
-  const ext = extensaoDe(file?.name)
-  if ((file?.type ?? '').startsWith('image/') || EXT_IMAGEM.includes(ext)) return 'imagem'
-  if (EXT_DOCUMENTO.includes(ext)) return 'documento'
-  return 'arquivo'
+export function extensaoDe(nome = '') {
+  const i = String(nome).lastIndexOf('.')
+  return i >= 0 ? String(nome).slice(i + 1).toLowerCase() : ''
 }
 
 export function formatarTamanho(bytes) {
@@ -55,7 +41,7 @@ export function formatarDataHora(data) {
   return `${d} às ${h}`
 }
 
-/* Devolve uma mensagem de erro, ou null se o arquivo é aceitável. */
+/* Devolve uma mensagem de erro, ou null se o arquivo parece aceitável. */
 export function validarArquivo(file) {
   if (!file) return 'Selecione um arquivo.'
   if (file.size === 0) return 'O arquivo está vazio.'
@@ -63,94 +49,69 @@ export function validarArquivo(file) {
     return `O arquivo tem ${formatarTamanho(file.size)}; o limite é ${formatarTamanho(TAMANHO_MAXIMO)}.`
   }
   if (!EXT_PERMITIDAS.includes(extensaoDe(file.name))) {
-    return 'Tipo de arquivo não permitido. Use imagens, PDF, documentos do Office, texto, CSV, JSON ou ZIP.'
+    return `Tipo de arquivo não permitido. Envie ${TIPOS_LEGIVEIS}.`
   }
   return null
 }
 
-/* Só links http(s) são aceitos/renderizados: bloqueia javascript:, data: etc. */
-export function urlSegura(url) {
-  try {
-    const u = new URL(String(url).trim())
-    return u.protocol === 'http:' || u.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-/* ── Metadados em tipoArquivo ── */
-export function montarTipoArquivo({ categoria, autor, emISO, tamanho }) {
-  const partes = (autorTexto) => {
-    const p = [categoria || 'arquivo']
-    if (autorTexto) p.push(`autor=${encodeURIComponent(autorTexto)}`)
-    if (emISO) p.push(`em=${emISO}`)
-    if (tamanho != null) p.push(`tam=${tamanho}`)
-    return p.join(';')
-  }
-  let nome = (autor ?? '').trim().slice(0, 60)
-  let texto = partes(nome)
-  // Garante caber na coluna: encurta o nome do autor até servir.
-  while (texto.length > LIMITE_TIPO_ARQUIVO && nome.length > 0) {
-    nome = nome.slice(0, Math.max(0, nome.length - 5))
-    texto = partes(nome)
-  }
-  return texto
-}
-
-function lerMeta(tipoArquivo) {
-  const [categoria = '', ...resto] = String(tipoArquivo ?? '').split(';')
-  const meta = {}
-  for (const par of resto) {
-    const i = par.indexOf('=')
-    if (i <= 0) continue
-    const chave = par.slice(0, i)
-    let valor = par.slice(i + 1)
-    try { valor = decodeURIComponent(valor) } catch { /* mantém cru */ }
-    meta[chave] = valor
-  }
-  return { categoria: categoria.trim(), meta }
-}
-
 /* Normaliza um anexo do back para o que a tela precisa. */
 export function lerAnexo(a) {
-  const { categoria, meta } = lerMeta(a.tipoArquivo)
-  const ext = extensaoDe(a.nome) || extensaoDe(a.url)
-  const ehLink = categoria === 'link'
-  const ehImagem = categoria === 'imagem' || (EXT_IMAGEM.includes(extensaoDe(a.url)) && ehLink)
-  const bruto = a.dataUpload ?? a.criadoEm ?? meta.em ?? null
-  const data = bruto ? new Date(bruto) : null
-  const tamanho = meta.tam != null && meta.tam !== '' ? Number(meta.tam) : null
+  const tipo = String(a.tipoAnexo ?? '').toUpperCase()
+  const data = a.criadoEm ? new Date(a.criadoEm) : null
   return {
     id: a.id,
-    nome: a.nome,
-    url: a.url,
-    categoria: categoria || 'arquivo',
-    ehLink,
-    ehImagem,
-    ehPdf: ext === 'pdf',
-    autor: a.autorNome ?? meta.autor ?? null,
+    nome: a.nomeArquivo ?? 'arquivo',
+    tipo,
+    ehImagem: tipo === 'PNG' || tipo === 'JPEG',
+    ehPdf: tipo === 'PDF',
+    tamanho: Number.isFinite(a.tamanhoBytes) ? a.tamanhoBytes : null,
+    autor: a.nomeUsuario ?? null,
     enviadoEm: data && !Number.isNaN(data.getTime()) ? data : null,
-    tamanho: Number.isFinite(tamanho) ? tamanho : null,
-    urlValida: urlSegura(a.url),
+    podeRemover: Boolean(a.podeRemover),   // o back diz se o botão "remover" deve aparecer
   }
 }
 
-/* Baixa o arquivo. Se o servidor de arquivos não permitir (CORS), abre em nova aba. */
-export async function baixarAnexo(anexo) {
-  if (!anexo.urlValida) return
+/* "Enviado por Ana · 03/11/2026 às 10:04 · 48 KB" */
+export function metaDoAnexo(a) {
+  const quem = a.autor ? `Enviado por ${a.autor}` : ''
+  const quando = a.enviadoEm ? formatarDataHora(a.enviadoEm) : ''
+  const base = [quem, quando].filter(Boolean).join(' · ') || 'Autor e data não informados'
+  return a.tamanho != null ? `${base} · ${formatarTamanho(a.tamanho)}` : base
+}
+
+/* Mensagem para o usuário a partir do erro do upload/download/remoção. */
+export function mensagemErroAnexo(err, fallback) {
+  switch (err?.status) {
+    case 413: return `O arquivo é maior que o limite de ${formatarTamanho(TAMANHO_MAXIMO)}.`
+    case 415: return `Tipo de arquivo não permitido. Envie ${TIPOS_LEGIVEIS}.`
+    default:  return getErrorMessage(err, fallback)
+  }
+}
+
+/* ── Arquivos baixados do back (Blob) ── */
+export function salvarBlob(blob, nome) {
+  const href = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = href
+  a.download = nome || 'arquivo'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(href), 1000)
+}
+
+/* Abre o arquivo numa nova aba. A aba é aberta JÁ, no clique (senão o navegador bloqueia
+   o pop-up por causa do download assíncrono); depois recebe o conteúdo. */
+export async function abrirBlobEmNovaAba(obterBlob, nome) {
+  const janela = window.open('', '_blank')
   try {
-    const res = await fetch(anexo.url, { mode: 'cors' })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const blob = await res.blob()
-    const href = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = href
-    a.download = anexo.nome || 'arquivo'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(href), 1000)
-  } catch {
-    window.open(anexo.url, '_blank', 'noopener,noreferrer')
+    const blob = await obterBlob()
+    if (!janela) { salvarBlob(blob, nome); return }   // pop-up bloqueado: baixa em vez de abrir
+    const url = URL.createObjectURL(blob)
+    janela.location.href = url
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000)
+  } catch (erro) {
+    janela?.close()
+    throw erro
   }
 }

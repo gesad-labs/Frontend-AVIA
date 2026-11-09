@@ -35,8 +35,12 @@ async function request(path, options = {}) {
   // filter chain reject these unauthenticated requests with a spurious 401.
   const isPublicAuthRoute = path.startsWith('/auth/')
 
+  // Upload (FormData): NÃO definir Content-Type — o navegador monta o multipart com o
+  // "boundary" correto. Forçar application/json aqui quebraria o envio de arquivos.
+  const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData
+
   const headers = {
-    'Content-Type': 'application/json',
+    ...(!isForm && { 'Content-Type': 'application/json' }),
     ...(token && !isPublicAuthRoute && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   }
@@ -53,11 +57,27 @@ async function request(path, options = {}) {
   return body
 }
 
+async function download(path) {
+  const token = getToken()
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw { status: res.status, body }
+  }
+  return res.blob()
+}
+
 /* ── HTTP methods ── */
+const corpo = data => (typeof FormData !== 'undefined' && data instanceof FormData ? data : JSON.stringify(data))
+
 export const api = {
-  post:   (path, data) => request(path, { method: 'POST',   body: JSON.stringify(data) }),
+  post:   (path, data) => request(path, { method: 'POST',   body: corpo(data) }),
   get:    (path)       => request(path, { method: 'GET' }),
   put:    (path, data) => request(path, { method: 'PUT',    body: JSON.stringify(data) }),
   patch:  (path, data) => request(path, { method: 'PATCH',  body: JSON.stringify(data) }),
   delete: (path, data) => request(path, { method: 'DELETE', ...(data !== undefined && { body: JSON.stringify(data) }) }),
+  download,
 }

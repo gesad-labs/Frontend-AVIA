@@ -11,7 +11,8 @@ const PERMISSION_GROUPS = [
     label: 'Conteúdo & Tarefas',
     Icon: IconContentTasks,
     permissions: [
-      { key: 'Criar Tarefas',   label: 'Criar tarefas',         desc: 'Permite adicionar novas tarefas no projeto.' },
+      { key: 'Criar Tarefas',     label: 'Criar tarefas',         desc: 'Permite adicionar novas tarefas no projeto.' },
+      { key: 'Criar Subtarefas',  label: 'Criar subtarefas',      desc: 'Dividir um card em subcards.' },
       { key: 'Editar Tarefas',  label: 'Editar tarefas',        desc: 'Modificar campos de tarefas existentes.' },
       { key: 'Excluir Tarefas', label: 'Excluir tarefas',       desc: 'Remover tarefas criadas por outros membros.' },
       { key: 'Mover Tarefas',   label: 'Mover items no quadro', desc: 'Alterar o status de tarefas entre as colunas.' },
@@ -33,7 +34,7 @@ const PERMISSION_GROUPS = [
     Icon: IconTeam,
     permissions: [
       { key: 'Adicionar Membros', label: 'Convidar novos membros', desc: 'Adicionar novos membros ao time de desenvolvimento.' },
-      { key: 'Remover Membros',   label: 'Remover membros',        desc: 'Remover integrantes do projeto.' },
+      { key: 'Atualizar Permissoes', label: 'Alterar permissões',  desc: 'Definir o que cada membro pode fazer no projeto.' },
     ],
   },
 ]

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { SENHA_TAMANHO_MAXIMO, temEspecialAceito } from '../../utils/senha'
 import styles from './SignupPage.module.css'
 
 const EyeOpen = () => (
@@ -34,7 +35,7 @@ export default function SignupPage() {
     { label: 'Mínimo de 8 caracteres',        met: form.password.length >= 8 },
     { label: 'Mínimo de uma letra maiúscula',  met: /[A-Z]/.test(form.password) },
     { label: 'Mínimo de número',               met: /\d/.test(form.password) },
-    { label: 'Mínimo de um caractere especial', met: /[^A-Za-z0-9]/.test(form.password) },
+    { label: 'Mínimo de um caractere especial (ex.: ! @ # $ %)', met: temEspecialAceito(form.password) },
   ]
 
   async function handleSubmit(e) {
@@ -103,6 +104,7 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type={showPass ? 'text' : 'password'}
+                  maxLength={SENHA_TAMANHO_MAXIMO}
                   placeholder="••••••••"
                   value={form.password}
                   onChange={handleChange}
