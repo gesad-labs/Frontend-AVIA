@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
+import { getErrorMessage } from '../../utils/errors'
 import styles from './PermissionsPage.module.css'
 
 /* ── Permission groups — keys match backend PermissoesUsuarioProjeto.nome ── */
@@ -10,7 +11,8 @@ const PERMISSION_GROUPS = [
     key: 'content',
     label: 'CONTEÚDO & TAREFAS',
     permissions: [
-      { key: 'Criar Tarefas',   label: 'Criar tarefas' },
+      { key: 'Criar Tarefas',     label: 'Criar tarefas' },
+      { key: 'Criar Subtarefas',  label: 'Criar subtarefas' },
       { key: 'Editar Tarefas',  label: 'Editar tarefas' },
       { key: 'Excluir Tarefas', label: 'Excluir tarefas' },
       { key: 'Mover Tarefas',   label: 'Mover tarefas' },
@@ -25,15 +27,11 @@ const PERMISSION_GROUPS = [
       { key: 'Gerenciar Sprints', label: 'Gerenciar sprints' },
     ],
   },
-  {
-    key: 'team',
-    label: 'GESTÃO DE EQUIPE',
-    permissions: [
-      { key: 'Adicionar Membros', label: 'Adicionar membros' },
-      { key: 'Remover Membros',   label: 'Remover membros' },
-    ],
-  },
 ]
+
+/* Exclusivas de gerente (definidas pelo CARGO no back): o back responde 403 se alguém tentar
+   conceder estas a um membro, e "Remover Membros" nem existe mais. Nunca são enviadas ao salvar. */
+const SO_GERENTE = new Set(['Adicionar Membros', 'Atualizar Permissoes', 'Remover Membros'])
 
 const ROLE_META = {
   Gerente:      { color: '#0369a1' },
@@ -123,12 +121,12 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
     setCardStatus('saving')
     setCardError('')
     try {
-      await projetoService.editarPermissoesMembro(projectId, membro.id, {
-        permissoes: Array.from(editPerms),
-      })
-      setApiPerms(new Set(editPerms))
-    } catch {
-      setCardError('Erro ao salvar. Tente novamente.')
+      const enviadas = Array.from(editPerms).filter(p => !SO_GERENTE.has(p))
+      await projetoService.editarPermissoesMembro(projectId, membro.id, { permissoes: enviadas })
+      setApiPerms(new Set(enviadas))
+      setEditPerms(new Set(enviadas))
+    } catch (err) {
+      setCardError(getErrorMessage(err, 'Erro ao salvar. Tente novamente.'))
     } finally {
       setCardStatus('idle')
     }
@@ -148,8 +146,8 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
       const set = new Set(Array.isArray(data?.permissoes) ? data.permissoes : [])
       setApiPerms(set)
       setEditPerms(new Set(set))
-    } catch {
-      setCardError('Erro ao restaurar. Tente novamente.')
+    } catch (err) {
+      setCardError(getErrorMessage(err, 'Erro ao restaurar. Tente novamente.'))
     } finally {
       setCardStatus('idle')
     }
@@ -203,6 +201,10 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
                   </div>
                 ))}
               </div>
+
+              <p className={styles.gerenteNote}>
+                Adicionar e remover membros e alterar permissões são ações exclusivas de gerentes.
+              </p>
 
               {cardError && <p className={styles.cardErrorMsg}>{cardError}</p>}
 

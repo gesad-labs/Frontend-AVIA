@@ -1,6 +1,12 @@
 import { api } from './api'
 import { montarQuery } from '../utils/historicoFiltros'
 
+function comoFormData(arquivo) {
+  const form = new FormData()
+  form.append('arquivo', arquivo)
+  return form
+}
+
 export const projetoService = {
   // Projetos
   listar:           ()              => api.get('/projetos'),
@@ -39,7 +45,9 @@ export const projetoService = {
 
   // Anexos de tarefa
   listarAnexos:   (id, tid)       => api.get(`/projetos/${id}/tarefas/${tid}/anexos`),
-  adicionarAnexo: (id, tid, data) => api.post(`/projetos/${id}/tarefas/${tid}/anexos`, data),
+  // O back recebe o ARQUIVO em multipart/form-data (campo "arquivo"), não mais um link em JSON.
+  adicionarAnexo: (id, tid, arquivo) => api.post(`/projetos/${id}/tarefas/${tid}/anexos`, comoFormData(arquivo)),
+  baixarAnexo:    (id, tid, aid)  => api.download(`/projetos/${id}/tarefas/${tid}/anexos/${aid}/download`),
   removerAnexo:   (id, tid, aid)  => api.delete(`/projetos/${id}/tarefas/${tid}/anexos/${aid}`),
 
   // Comentários de tarefa

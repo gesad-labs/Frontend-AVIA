@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
-import { useAuth } from '../../hooks/useAuth'
-import { montarTipoArquivo } from '../../utils/anexos'
+import {
+  ACCEPT_ARQUIVOS, TAMANHO_MAXIMO, TIPOS_LEGIVEIS, formatarTamanho, mensagemErroAnexo, validarArquivo,
+} from '../../utils/anexos'
 import styles from './CardFormPage.module.css'
 
 const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
@@ -27,9 +28,8 @@ export default function EditCardPage() {
   const [responsavelId, setResponsavelId] = useState('')
   const [membros,      setMembros]     = useState([])
   const [projeto,      setProjeto]     = useState(null)
-  const { user } = useAuth()
-  const [linkUrl,      setLinkUrl]     = useState('')
-  const [linkNome,     setLinkNome]    = useState('')
+  const [arquivo,      setArquivo]     = useState(null)
+  const [arquivoErro,  setArquivoErro] = useState('')
   const [saving,       setSaving]      = useState(false)
   const [loadingData,  setLoadingData] = useState(true)
   const [error,        setError]       = useState('')
@@ -56,6 +56,14 @@ export default function EditCardPage() {
     })
   }, [projectId, tarefaId])
 
+  function escolherArquivo(e) {
+    const f = e.target.files?.[0] ?? null
+    const problema = f ? validarArquivo(f) : null
+    setArquivoErro(problema ?? '')
+    setArquivo(problema ? null : f)
+    if (problema) e.target.value = ''
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!titulo.trim()) { setError('Título obrigatório'); return }
@@ -69,12 +77,14 @@ export default function EditCardPage() {
         responsaveisIds: responsavelId ? [responsavelId] : [],
         tipo:            tipo || null,
       })
-      if (linkUrl.trim()) {
-        await projetoService.adicionarAnexo(projectId, tarefaId, {
-          nome:        linkNome.trim() || linkUrl.trim(),
-          tipoArquivo: montarTipoArquivo({ categoria: 'link', autor: user?.name, emISO: new Date().toISOString() }),
-          url:         linkUrl.trim(),
-        }).catch(() => {})
+      if (arquivo) {
+        try {
+          await projetoService.adicionarAnexo(projectId, tarefaId, arquivo)
+        } catch (err) {
+          setError(`Alterações salvas, mas o arquivo não foi anexado: ${mensagemErroAnexo(err, 'erro ao enviar')}`)
+          setSaving(false)
+          return
+        }
       }
       navigate(`/project/${projectId}/board`)
     } catch {
@@ -178,24 +188,22 @@ export default function EditCardPage() {
               </div>
             </div>
 
-            {/* Link section */}
+            {/* Anexo (arquivo) */}
             <div className={styles.linkSection}>
-              <label className={styles.fieldLabel}>Anexar Link (opcional)</label>
-              <div className={styles.linkRow}>
-                <input
-                  className={styles.input}
-                  value={linkUrl}
-                  onChange={e => setLinkUrl(e.target.value)}
-                  placeholder="https://..."
-                  type="url"
-                />
-                <input
-                  className={styles.input}
-                  value={linkNome}
-                  onChange={e => setLinkNome(e.target.value)}
-                  placeholder="Nome do link (opcional)"
-                />
-              </div>
+              <label className={styles.fieldLabel}>Anexar arquivo (opcional)</label>
+              <input
+                className={styles.input}
+                type="file"
+                accept={ACCEPT_ARQUIVOS}
+                aria-label="Anexar arquivo"
+                onChange={escolherArquivo}
+              />
+              <small style={{ color: '#64748b' }}>
+                {arquivo
+                  ? `${arquivo.name} · ${formatarTamanho(arquivo.size)}`
+                  : `${TIPOS_LEGIVEIS} · até ${formatarTamanho(TAMANHO_MAXIMO)}`}
+              </small>
+              {arquivoErro && <small role="alert" style={{ color: '#b91c1c', display: 'block' }}>{arquivoErro}</small>}
             </div>
 
             {/* Ações */}

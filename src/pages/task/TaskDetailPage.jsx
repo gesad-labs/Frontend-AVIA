@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
 import { getErrorMessage } from '../../utils/errors'
-import { enviarArquivo, uploadConfigurado } from '../../services/uploadService'
 import {
-  ACCEPT_ARQUIVOS, TAMANHO_MAXIMO, baixarAnexo, categoriaDoArquivo, formatarDataHora,
-  formatarTamanho, lerAnexo, montarTipoArquivo, urlSegura, validarArquivo,
+  ACCEPT_ARQUIVOS, TAMANHO_MAXIMO, TIPOS_LEGIVEIS, abrirBlobEmNovaAba, formatarTamanho,
+  lerAnexo, mensagemErroAnexo, metaDoAnexo, salvarBlob, validarArquivo,
 } from '../../utils/anexos'
 import styles from './TaskDetailPage.module.css'
 
@@ -186,15 +185,12 @@ function SideDropdown({ options, value, onChange, renderTrigger }) {
   )
 }
 
-/* ─── Modal: Adicionar Anexo (arquivo ou link) ─────────────────────── */
-function AnexarModal({ onClose, onAdd, autor }) {
-  const [aba,       setAba]       = useState(uploadConfigurado ? 'arquivo' : 'link')
-  const [file,      setFile]      = useState(null)
+/* ─── Modal: Adicionar anexo (arquivo) ──────────────────────────────── */
+function AnexarModal({ onClose, onAdd }) {
+  const [file,       setFile]       = useState(null)
   const [arrastando, setArrastando] = useState(false)
-  const [nome,      setNome]      = useState('')
-  const [url,       setUrl]       = useState('')
-  const [busy,      setBusy]      = useState(false)
-  const [err,       setErr]       = useState('')
+  const [busy,       setBusy]       = useState(false)
+  const [err,        setErr]        = useState('')
   const inputRef = useRef(null)
 
   function escolher(f) {
@@ -206,116 +202,55 @@ function AnexarModal({ onClose, onAdd, autor }) {
 
   async function handleSubmit(e) {
     e.preventDefault(); setErr('')
-
-    if (aba === 'arquivo') {
-      const problema = validarArquivo(file)
-      if (problema) { setErr(problema); return }
-      setBusy(true)
-      try {
-        const { url: urlArquivo } = await enviarArquivo(file)
-        await onAdd({
-          nome: file.name.slice(0, 255),
-          tipoArquivo: montarTipoArquivo({
-            categoria: categoriaDoArquivo(file), autor, emISO: new Date().toISOString(), tamanho: file.size,
-          }),
-          url: urlArquivo,
-        })
-        onClose()
-      } catch (e2) {
-        // e2.status existe quando o erro veio da API do AVIA; senão veio do envio do arquivo.
-        setErr(e2?.status != null
-          ? getErrorMessage(e2, 'Não foi possível registrar o anexo.')
-          : (e2?.message || 'Não foi possível enviar o arquivo.'))
-      } finally {
-        setBusy(false)
-      }
-      return
-    }
-
-    if (!nome.trim() || !url.trim()) { setErr('Preencha todos os campos.'); return }
-    if (!urlSegura(url)) { setErr('Informe um link válido, começando com http:// ou https://.'); return }
+    const problema = validarArquivo(file)
+    if (problema) { setErr(problema); return }
     setBusy(true)
     try {
-      await onAdd({
-        nome: nome.trim(),
-        tipoArquivo: montarTipoArquivo({ categoria: 'link', autor, emISO: new Date().toISOString() }),
-        url: url.trim(),
-      })
+      await onAdd(file)
       onClose()
     } catch (e2) {
-      setErr(getErrorMessage(e2, 'Não foi possível adicionar o link.'))
-    } finally {
+      setErr(mensagemErroAnexo(e2, 'Não foi possível enviar o arquivo.'))
       setBusy(false)
     }
   }
 
-  const semUpload = aba === 'arquivo' && !uploadConfigurado
-
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div className={styles.modalOverlay} onClick={busy ? undefined : onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle}>Adicionar anexo</h3>
           <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><IconX /></button>
         </div>
 
-        <div className={styles.tabs} role="tablist">
-          <button type="button" role="tab" aria-selected={aba === 'arquivo'}
-            className={`${styles.tab} ${aba === 'arquivo' ? styles.tabActive : ''}`}
-            onClick={() => { setAba('arquivo'); setErr('') }}>Arquivo</button>
-          <button type="button" role="tab" aria-selected={aba === 'link'}
-            className={`${styles.tab} ${aba === 'link' ? styles.tabActive : ''}`}
-            onClick={() => { setAba('link'); setErr('') }}>Link</button>
-        </div>
-
         <form onSubmit={handleSubmit} className={styles.modalBody}>
-          {aba === 'arquivo' ? (
-            <>
-              {!uploadConfigurado && (
-                <p className={styles.uploadAviso} role="note">
-                  O envio de arquivos ainda não foi configurado neste ambiente
-                  (veja <code>.env.example</code>). Enquanto isso, use a aba Link.
-                </p>
-              )}
-              <div
-                className={`${styles.dropzone} ${arrastando ? styles.dropzoneActive : ''} ${!uploadConfigurado ? styles.dropzoneOff : ''}`}
-                role="button" tabIndex={0} aria-label="Escolher arquivo"
-                onClick={() => uploadConfigurado && inputRef.current?.click()}
-                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && uploadConfigurado) { e.preventDefault(); inputRef.current?.click() } }}
-                onDragOver={e => { e.preventDefault(); if (uploadConfigurado) setArrastando(true) }}
-                onDragLeave={() => setArrastando(false)}
-                onDrop={e => { e.preventDefault(); setArrastando(false); if (uploadConfigurado) escolher(e.dataTransfer.files?.[0]) }}
-              >
-                {file ? (
-                  <>
-                    <strong className={styles.dropzoneTitle}>{file.name}</strong>
-                    <span className={styles.dropzoneHint}>{formatarTamanho(file.size)} · clique para trocar</span>
-                  </>
-                ) : (
-                  <>
-                    <strong className={styles.dropzoneTitle}>Arraste um arquivo aqui</strong>
-                    <span className={styles.dropzoneHint}>ou clique para escolher · até {formatarTamanho(TAMANHO_MAXIMO)}</span>
-                  </>
-                )}
-                <input ref={inputRef} type="file" hidden accept={ACCEPT_ARQUIVOS} data-testid="anexo-input"
-                  onChange={e => { escolher(e.target.files?.[0]); e.target.value = '' }} />
-              </div>
-            </>
-          ) : (
-            <>
-              <label className={styles.fieldLabel}>Nome</label>
-              <input className={styles.fieldInput} value={nome} onChange={e => setNome(e.target.value)}
-                placeholder="ex: Documento de requisitos" autoFocus />
-              <label className={styles.fieldLabel} style={{ marginTop: 14 }}>URL / Link</label>
-              <input className={styles.fieldInput} value={url} onChange={e => setUrl(e.target.value)}
-                placeholder="https://..." />
-            </>
-          )}
+          <div
+            className={`${styles.dropzone} ${arrastando ? styles.dropzoneActive : ''}`}
+            role="button" tabIndex={0} aria-label="Escolher arquivo"
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
+            onDragOver={e => { e.preventDefault(); setArrastando(true) }}
+            onDragLeave={() => setArrastando(false)}
+            onDrop={e => { e.preventDefault(); setArrastando(false); escolher(e.dataTransfer.files?.[0]) }}
+          >
+            {file ? (
+              <>
+                <strong className={styles.dropzoneTitle}>{file.name}</strong>
+                <span className={styles.dropzoneHint}>{formatarTamanho(file.size)} · clique para trocar</span>
+              </>
+            ) : (
+              <>
+                <strong className={styles.dropzoneTitle}>Arraste um arquivo aqui</strong>
+                <span className={styles.dropzoneHint}>ou clique para escolher · {TIPOS_LEGIVEIS} · até {formatarTamanho(TAMANHO_MAXIMO)}</span>
+              </>
+            )}
+            <input ref={inputRef} type="file" hidden accept={ACCEPT_ARQUIVOS} data-testid="anexo-input"
+              onChange={e => { escolher(e.target.files?.[0]); e.target.value = '' }} />
+          </div>
           {err && <p className={styles.fieldErr} role="alert">{err}</p>}
           <div className={styles.modalFooter}>
-            <button type="button" className={styles.btnSecondary} onClick={onClose}>Cancelar</button>
-            <button type="submit" className={styles.btnPrimary} disabled={busy || semUpload || (aba === 'arquivo' && !file)}>
-              {busy ? (aba === 'arquivo' ? 'Enviando...' : 'Adicionando...') : 'Adicionar'}
+            <button type="button" className={styles.btnSecondary} onClick={onClose} disabled={busy}>Cancelar</button>
+            <button type="submit" className={styles.btnPrimary} disabled={busy || !file}>
+              {busy ? 'Enviando...' : 'Adicionar'}
             </button>
           </div>
         </form>
@@ -324,8 +259,20 @@ function AnexarModal({ onClose, onAdd, autor }) {
   )
 }
 
-/* ─── Visualização de imagem anexada ─────────────────────────────────── */
-function AnexoPreview({ anexo, onClose }) {
+/* ─── Visualização de imagem anexada (busca o arquivo com o token) ──── */
+function AnexoPreview({ projectId, taskId, anexo, onBaixar, onClose }) {
+  const [url,  setUrl]  = useState(null)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    let vivo = true
+    let objeto = null
+    projetoService.baixarAnexo(projectId, taskId, anexo.id)
+      .then(blob => { if (vivo) { objeto = URL.createObjectURL(blob); setUrl(objeto) } })
+      .catch(err => { if (vivo) setErro(mensagemErroAnexo(err, 'Não foi possível carregar a imagem.')) })
+    return () => { vivo = false; if (objeto) URL.revokeObjectURL(objeto) }
+  }, [projectId, taskId, anexo.id])
+
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -340,25 +287,19 @@ function AnexoPreview({ anexo, onClose }) {
           <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><IconX /></button>
         </div>
         <div className={styles.previewBody}>
-          <img src={anexo.url} alt={anexo.nome} className={styles.previewImg} />
+          {erro ? <p className={styles.fieldErr} role="alert">{erro}</p>
+            : url ? <img src={url} alt={anexo.nome} className={styles.previewImg} />
+            : <p className={styles.descEmpty} style={{ color: '#cbd5e1' }}>Carregando...</p>}
         </div>
         <div className={styles.previewFooter}>
           <span className={styles.anexoMeta}>{metaDoAnexo(anexo)}</span>
-          <button type="button" className={styles.btnSecondary} onClick={() => baixarAnexo(anexo)}>
+          <button type="button" className={styles.btnSecondary} onClick={() => onBaixar(anexo)}>
             <IconDownload /> Baixar
           </button>
         </div>
       </div>
     </div>
   )
-}
-
-/* "Enviado por Ana · 03/11/2026 às 10:04 · 48 KB" — ou aviso para anexos antigos */
-function metaDoAnexo(a) {
-  const quem = a.autor ? `Enviado por ${a.autor}` : (a.enviadoEm ? 'Enviado' : '')
-  const quando = a.enviadoEm ? formatarDataHora(a.enviadoEm) : ''
-  const base = [quem, quando].filter(Boolean).join(' · ') || 'Autor e data não registrados'
-  return a.tamanho != null ? `${base} · ${formatarTamanho(a.tamanho)}` : base
 }
 
 /* ─── Modal: Vincular Tarefa ─────────────────────────────────────────── */
@@ -457,6 +398,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
 export default function TaskDetailPage() {
   const { projectId, taskId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
 
   /* Core data */
@@ -471,7 +413,8 @@ export default function TaskDetailPage() {
   const [novoSubTitulo, setNovoSubTitulo] = useState('')
   const [criandoSub,  setCriandoSub]  = useState(false)
   const [preview,    setPreview]    = useState(null)
-  const [anexoErro,  setAnexoErro]  = useState('')
+  // Quando o card é criado mas o anexo falha, a tela de criar manda o aviso por aqui.
+  const [anexoErro,  setAnexoErro]  = useState(() => location.state?.avisoAnexo ?? '')
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState('')
 
@@ -701,9 +644,30 @@ export default function TaskDetailPage() {
     } finally { setPostingComment(false) }
   }
 
-  async function addAnexo(data) {
-    const a = await projetoService.adicionarAnexo(projectId, taskId, data)
-    setAnexos(prev => [...prev, a])
+  async function addAnexo(arquivo) {
+    const novo = await projetoService.adicionarAnexo(projectId, taskId, arquivo)
+    // O back responde 204 sem corpo para arquivo vazio: api.js devolve null. Não é sucesso.
+    if (!novo) throw { status: 400, body: { mensagem: 'O arquivo está vazio ou não foi aceito.' } }
+    setAnexos(prev => [...prev, novo])
+  }
+
+  async function visualizarAnexo(a) {
+    setAnexoErro('')
+    try {
+      if (a.ehImagem) setPreview(a)
+      else await abrirBlobEmNovaAba(() => projetoService.baixarAnexo(projectId, taskId, a.id), a.nome)
+    } catch (err) {
+      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível abrir o anexo.'))
+    }
+  }
+
+  async function baixarArquivo(a) {
+    setAnexoErro('')
+    try {
+      salvarBlob(await projetoService.baixarAnexo(projectId, taskId, a.id), a.nome)
+    } catch (err) {
+      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível baixar o anexo.'))
+    }
   }
 
   async function removeAnexo(anexo) {
@@ -713,7 +677,7 @@ export default function TaskDetailPage() {
       await projetoService.removerAnexo(projectId, taskId, anexo.id)
       setAnexos(prev => prev.filter(a => a.id !== anexo.id))
     } catch (err) {
-      setAnexoErro(getErrorMessage(err, 'Não foi possível remover o anexo.'))
+      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível remover o anexo.'))
     }
   }
 
@@ -847,38 +811,32 @@ export default function TaskDetailPage() {
               {anexosInfo.map(a => (
                 <div key={a.id} className={styles.anexoItem}>
                   <div className={styles.anexoThumb}>
-                    {a.ehImagem && a.urlValida
-                      ? <img src={a.url} alt="" className={styles.anexoImg} />
-                      : <span className={styles.anexoIcon}>{a.ehLink ? '🔗' : a.ehPdf ? '📄' : '📎'}</span>}
+                    <span className={styles.anexoIcon}>{a.ehImagem ? '🖼️' : a.ehPdf ? '📄' : '📎'}</span>
                   </div>
                   <div className={styles.anexoInfo}>
-                    {a.urlValida ? (
-                      <a href={a.url} target="_blank" rel="noopener noreferrer" className={styles.anexoNomeLink}
-                        onClick={e => { if (a.ehImagem) { e.preventDefault(); setPreview(a) } }}>
-                        {a.nome}
-                      </a>
-                    ) : (
-                      <span className={styles.anexoNome} title="Link inválido">{a.nome}</span>
-                    )}
+                    <button type="button" className={`${styles.anexoNomeLink} ${styles.anexoNomeBtn}`}
+                      onClick={() => ((a.ehImagem || a.ehPdf) ? visualizarAnexo(a) : baixarArquivo(a))}>
+                      {a.nome}
+                    </button>
                     <span className={styles.anexoMeta}>{metaDoAnexo(a)}</span>
                   </div>
                   <div className={styles.anexoActions}>
-                    {a.urlValida && (
+                    {(a.ehImagem || a.ehPdf) && (
                       <button type="button" className={styles.anexoAction} title="Visualizar" aria-label={`Visualizar ${a.nome}`}
-                        onClick={() => (a.ehImagem ? setPreview(a) : window.open(a.url, '_blank', 'noopener,noreferrer'))}>
+                        onClick={() => visualizarAnexo(a)}>
                         <IconEye />
                       </button>
                     )}
-                    {a.urlValida && !a.ehLink && (
-                      <button type="button" className={styles.anexoAction} title="Baixar" aria-label={`Baixar ${a.nome}`}
-                        onClick={() => baixarAnexo(a)}>
-                        <IconDownload />
+                    <button type="button" className={styles.anexoAction} title="Baixar" aria-label={`Baixar ${a.nome}`}
+                      onClick={() => baixarArquivo(a)}>
+                      <IconDownload />
+                    </button>
+                    {a.podeRemover && (
+                      <button type="button" className={styles.anexoAction} title="Remover" aria-label={`Remover ${a.nome}`}
+                        onClick={() => removeAnexo(a)}>
+                        <IconX />
                       </button>
                     )}
-                    <button type="button" className={styles.anexoAction} title="Remover" aria-label={`Remover ${a.nome}`}
-                      onClick={() => removeAnexo(a)}>
-                      <IconX />
-                    </button>
                   </div>
                 </div>
               ))}
@@ -1240,9 +1198,9 @@ export default function TaskDetailPage() {
 
       {/* ─── Modals ─── */}
       {showAnexar && (
-        <AnexarModal onClose={() => setShowAnexar(false)} onAdd={addAnexo} autor={user?.name} />
+        <AnexarModal onClose={() => setShowAnexar(false)} onAdd={addAnexo} />
       )}
-      {preview && <AnexoPreview anexo={preview} onClose={() => setPreview(null)} />}
+      {preview && <AnexoPreview projectId={projectId} taskId={taskId} anexo={preview} onBaixar={baixarArquivo} onClose={() => setPreview(null)} />}
       {showVincular && (
         <VincularModal
           projectId={projectId}
