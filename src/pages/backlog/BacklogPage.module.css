@@ -822,3 +822,17 @@
 
 .multiSelectItem:hover { background: #f1f5f9; }
 .multiSelectItem input[type="checkbox"] { accent-color: #6366f1; cursor: pointer; }
+
+/* ── US019: sprints ativas e futuras ── */
+.sprintGroup { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.groupHeader { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #475569; }
+.groupCount { padding: 1px 8px; border-radius: 100px; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 700; }
+.groupEmpty { margin: 0; padding: 12px 14px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: 13px; color: #64748b; }
+.sprintHint { margin: -4px 20px 10px; font-size: 12px; line-height: 1.5; color: #92400e; }
+.futuraTag { margin-left: 8px; padding: 2px 8px; border-radius: 4px; background: #eff6ff; color: #2563eb; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.avisoSprint {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 32px 16px; padding: 10px 14px; background: #fef2f2; border: 1px solid #fca5a5;
+  border-radius: 8px; color: #b91c1c; font-size: 13px; font-weight: 600; line-height: 1.5;
+}
+.avisoSprint button { background: none; border: none; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; }

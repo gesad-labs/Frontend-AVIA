@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useNotificacoesCtx } from '../../contexts/NotificacoesContext'
 import { getErrorMessage } from '../../utils/errors'
+import { SPRINT, verificarEncerramento } from '../../utils/sprints'
 import styles from './BoardPage.module.css'
 
 const COLUMNS = [
@@ -989,19 +990,27 @@ export default function BoardPage() {
     }
   }
 
+  /* US019: só encerra com ZERO cards pendentes. O back não valida, então relê o servidor antes. */
   async function handleEncerrarSprint() {
     if (!sprint) return
-    const incompletos = tarefas.filter(t => t.status !== 'CONCLUIDA').length
-    const msg = incompletos > 0
-      ? `Encerrar "${sprint.nome}"?\n\n${incompletos} card${incompletos > 1 ? 's' : ''} não concluído${incompletos > 1 ? 's' : ''} ${incompletos > 1 ? 'serão movidos' : 'será movido'} de volta ao backlog.\n\nCards concluídos também voltam ao backlog marcados como concluídos.`
-      : `Encerrar "${sprint.nome}"?\n\nTodos os ${tarefas.length} cards estão concluídos e serão movidos para o backlog como concluídos.`
-    if (!window.confirm(msg)) return
+    setAviso('')
     setClosingSprint(true)
     try {
-      await projetoService.editarSprint(projectId, sprint.id, { status: 'CONCLUIDA' })
+      const v = await verificarEncerramento(projetoService, projectId, sprint)
+      if (!v.ok) {
+        setAviso(v.motivo)
+        setClosingSprint(false)
+        fetchAll()               // a tela pode estar desatualizada: recarrega para mostrar os pendentes reais
+        return
+      }
+      if (!window.confirm(`Encerrar "${sprint.nome}"?\n\nTodos os ${tarefas.length} cards estão concluídos.`)) {
+        setClosingSprint(false)
+        return
+      }
+      await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.CONCLUIDA })
       navigate(`/project/${projectId}/backlog`)
-    } catch {
-      alert('Sem permissão ou erro ao encerrar sprint.')
+    } catch (err) {
+      setAviso(getErrorMessage(err, 'Não foi possível encerrar a sprint.'))
       setClosingSprint(false)
     }
   }

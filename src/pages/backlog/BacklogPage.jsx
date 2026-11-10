@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { getErrorMessage } from '../../utils/errors'
+import {
+  ROTULO_SPRINT, SPRINT, agruparSprints, dicaDaSprint, podeEncerrar, podeIniciar,
+  verificarEncerramento, verificarInicio,
+} from '../../utils/sprints'
 import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './BacklogPage.module.css'
 
@@ -465,7 +469,7 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
 }
 
 /* ── Task row — draggable ── */
-function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh, isGerente, canEditTarefas }) {
+function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh, isGerente, canEditTarefas, futura = false }) {
   const navigate = useNavigate()
   const hasActivePoker = activePokerTasks?.has(tarefa.id)
   const [editOpen, setEditOpen] = useState(false)
@@ -491,7 +495,6 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
       await projetoService.removerTarefa(projectId, tarefa.id)
       onRefresh()
     } catch (err) {
-      // Ex.: 409 quando o card tem subcards — o back explica o que fazer.
       alert(getErrorMessage(err, 'Erro ao remover.'))
     } finally {
       setRemoving(false)
@@ -513,6 +516,7 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
             <span className={styles.impedimentoMark} title="Impedimento"><BlockIcon /> Impedimento</span>
           )}
           <span className={styles.taskTitle}>{tarefa.titulo}</span>
+            {futura && <span className={styles.futuraTag} title="Atividade planejada para uma sprint futura">Futura</span>}
           <div className={styles.taskBadges}>
             <PrioridadeBadge value={tarefa.prioridade} />
             <StatusBadge value={tarefa.status} />
@@ -573,18 +577,14 @@ function useDropZone({ targetSprintId, projectId, onRefresh }) {
 }
 
 /* ── Sprint section ── */
-const SPRINT_STATUS_LABEL = {
-  EM_PLANEJAMENTO: 'Planejada',
-  EM_ANDAMENTO:    'Em andamento',
-  CONCLUIDA:       'Concluída',
-}
+const SPRINT_STATUS_LABEL = ROTULO_SPRINT   // Futura · Ativa · Concluída
 const SPRINT_STATUS_CLS = {
   EM_PLANEJAMENTO: 'sprintStatusPlanejada',
   EM_ANDAMENTO:    'sprintStatusAndamento',
   CONCLUIDA:       'sprintStatusConcluida',
 }
 
-function SprintSection({ sprint, tarefas, projectId, allSprints, membros, activePokerTasks, isGerente, canCreateTarefas, onRefresh }) {
+function SprintSection({ sprint, tarefas, projectId, allSprints, membros, activePokerTasks, isGerente, canCreateTarefas, onRefresh, onAviso }) {
   const [collapsed, setCollapsed]       = useState(false)
   const [updatingStatus, setUpdatingSt] = useState(false)
 
@@ -595,16 +595,36 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
   const conclPts = tarefas.filter(t => t.status === 'CONCLUIDA').reduce((a, t) => a + (t.estimativa || 0), 0)
   const progPct  = totalPts > 0 ? Math.round((conclPts / totalPts) * 100) : 0
 
-  const canStart  = sprint.status === 'EM_PLANEJAMENTO' && !allSprints.some(s => s.status === 'EM_ANDAMENTO')
-  const canFinish = sprint.status === 'EM_ANDAMENTO'
+  const ehFutura   = sprint.status === SPRINT.FUTURA
+  const ehAtiva    = sprint.status === SPRINT.ATIVA
+  const inicio     = podeIniciar(sprint, allSprints)
+  const encerra    = podeEncerrar(sprint, tarefas)
+  const dica       = isGerente ? dicaDaSprint(sprint, allSprints, tarefas) : ''
 
-  async function changeStatus(novoStatus) {
-    setUpdatingSt(true)
+  /* Regras da US019 (o back não as valida): relê o servidor antes de agir. */
+  async function iniciar() {
+    setUpdatingSt(true); onAviso('')
     try {
-      await projetoService.editarSprint(projectId, sprint.id, { status: novoStatus })
+      const v = await verificarInicio(projetoService, projectId, sprint)
+      if (!v.ok) { onAviso(v.motivo); onRefresh(); return }
+      await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.ATIVA })
       onRefresh()
-    } catch {
-      alert('Sem permissão para alterar o status da sprint.')
+    } catch (err) {
+      onAviso(getErrorMessage(err, 'Não foi possível iniciar a sprint.'))
+    } finally {
+      setUpdatingSt(false)
+    }
+  }
+
+  async function encerrar() {
+    setUpdatingSt(true); onAviso('')
+    try {
+      const v = await verificarEncerramento(projetoService, projectId, sprint)
+      if (!v.ok) { onAviso(v.motivo); onRefresh(); return }
+      await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.CONCLUIDA })
+      onRefresh()
+    } catch (err) {
+      onAviso(getErrorMessage(err, 'Não foi possível encerrar a sprint.'))
     } finally {
       setUpdatingSt(false)
     }
@@ -644,10 +664,19 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
           </div>
         </div>
         <div className={styles.sprintCardActions}>
-          {isGerente && canStart  && <button className={styles.btnStart}  disabled={updatingStatus} onClick={() => changeStatus('EM_ANDAMENTO')}>{updatingStatus ? '...' : 'Iniciar Sprint'}</button>}
-          {isGerente && canFinish && <button className={styles.btnFinish} disabled={updatingStatus} onClick={() => changeStatus('CONCLUIDA')}>{updatingStatus ? '...' : 'Encerrar Sprint'}</button>}
+          {isGerente && ehFutura && (
+            <button className={styles.btnStart} disabled={updatingStatus || !inicio.ok} title={inicio.ok ? '' : inicio.motivo} onClick={iniciar}>
+              {updatingStatus ? '...' : 'Iniciar Sprint'}
+            </button>
+          )}
+          {isGerente && ehAtiva && (
+            <button className={styles.btnFinish} disabled={updatingStatus || !encerra.ok} title={encerra.ok ? '' : encerra.motivo} onClick={encerrar}>
+              {updatingStatus ? '...' : 'Encerrar Sprint'}
+            </button>
+          )}
         </div>
       </div>
+      {dica && <p className={styles.sprintHint}>{dica}</p>}
 
       {!collapsed && (
         <div className={styles.sprintCardBody}>
@@ -661,7 +690,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
           ) : (
             <div className={styles.taskList}>
               {tarefas.map(t => (
-                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} isGerente={isGerente} canEditTarefas={canCreateTarefas} />
+                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} isGerente={isGerente} canEditTarefas={canCreateTarefas} futura={ehFutura} />
               ))}
               {dropZone.isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
             </div>
@@ -689,9 +718,9 @@ export default function BacklogPage() {
   const [error, setError]                   = useState('')
   const [showCreateSprint, setShowCreateSprint] = useState(false)
   const [backlogCollapsed, setBacklogCollapsed] = useState(false)
+  const [aviso, setAviso]                   = useState('')
   const pokerStompRef = useRef(null)
 
-  /* ── WS: escuta sessões ativas em tempo real ── */
   useEffect(() => {
     const client = createPokerClient({
       onConnect: () => {
@@ -752,7 +781,6 @@ export default function BacklogPage() {
     }
   }, [projectId])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchAll() }, [fetchAll])
 
   const backlogPts = backlogTarefas.reduce((a, t) => a + (t.estimativa || 0), 0)
@@ -765,6 +793,33 @@ export default function BacklogPage() {
 
   if (loading) return <div className={styles.page}><p className={styles.stateText}>Carregando backlog...</p></div>
   if (error)   return <div className={styles.page}><p className={styles.stateError}>{error}</p></div>
+
+  const grupos = agruparSprints(sprints)
+
+  function grupo(titulo, lista, vazio = null) {
+    if (lista.length === 0 && !vazio) return null
+    return (
+      <section className={styles.sprintGroup} aria-label={titulo}>
+        <h2 className={styles.groupHeader}>{titulo} <span className={styles.groupCount}>{lista.length}</span></h2>
+        {lista.length === 0 && <p className={styles.groupEmpty}>{vazio}</p>}
+        {lista.map(s => (
+          <SprintSection
+            key={s.id}
+            sprint={s}
+            tarefas={sprintTarefas[s.id] ?? []}
+            projectId={projectId}
+            allSprints={sprints}
+            membros={membros}
+            activePokerTasks={activePokerTasks}
+            isGerente={isGerente}
+            canCreateTarefas={canCreateTarefas}
+            onRefresh={fetchAll}
+            onAviso={setAviso}
+          />
+        ))}
+      </section>
+    )
+  }
 
   const backlogCardCls = [
     styles.backlogCard,
@@ -786,6 +841,18 @@ export default function BacklogPage() {
         )}
       </div>
 
+      {grupos.ativas.length > 1 && (
+        <div className={styles.avisoSprint} role="alert">
+          Há {grupos.ativas.length} sprints ativas, mas só uma deve estar ativa por vez. Encerre as demais.
+        </div>
+      )}
+      {aviso && (
+        <div className={styles.avisoSprint} role="alert">
+          <span>{aviso}</span>
+          <button type="button" onClick={() => setAviso('')} aria-label="Fechar aviso">×</button>
+        </div>
+      )}
+
       <div className={styles.content}>
         {sprints.length === 0 ? (
           <div className={styles.emptySprints}>
@@ -798,20 +865,11 @@ export default function BacklogPage() {
           </div>
         ) : (
           <div className={styles.sprintList}>
-            {sprints.map(s => (
-              <SprintSection
-                key={s.id}
-                sprint={s}
-                tarefas={sprintTarefas[s.id] ?? []}
-                projectId={projectId}
-                allSprints={sprints}
-                membros={membros}
-                activePokerTasks={activePokerTasks}
-                isGerente={isGerente}
-                canCreateTarefas={canCreateTarefas}
-                onRefresh={fetchAll}
-              />
-            ))}
+            {grupo('Sprint ativa', grupos.ativas, grupos.futuras.length > 0 && grupos.ativas.length === 0
+              ? (isGerente ? 'Nenhuma sprint ativa. Inicie uma sprint futura para começar.' : 'Nenhuma sprint ativa no momento.')
+              : null)}
+            {grupo('Sprints futuras', grupos.futuras)}
+            {grupo('Sprints concluídas', grupos.concluidas)}
           </div>
         )}
 
