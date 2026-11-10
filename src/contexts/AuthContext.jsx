@@ -60,11 +60,10 @@ export function AuthProvider({ children }) {
       await api.post('/auth/cadastro', { nome: name, email, senha: password })
       return { success: true }
     } catch (err) {
-      // Backend returns 500 for duplicate email (Spring Boot 3+ hides message field)
       const msg =
-        err.status === 500
-          ? 'E-mail já cadastrado. Use outro endereço.'
-          : err.body?.message ?? 'Erro ao criar conta.'
+        err.status === 409
+          ? (err.body?.message ?? 'E-mail já cadastrado. Use outro endereço.')
+          : (err.body?.message ?? 'Erro ao criar conta. Tente novamente.')
       return { success: false, errors: { detail: msg } }
     } finally {
       setAuthLoading(false)
