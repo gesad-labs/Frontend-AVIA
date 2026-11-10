@@ -781,6 +781,7 @@ export default function BacklogPage() {
     }
   }, [projectId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos dados da tela; futuro: mover para um hook de dados (ex.: React Query)
   useEffect(() => { fetchAll() }, [fetchAll])
 
   const backlogPts = backlogTarefas.reduce((a, t) => a + (t.estimativa || 0), 0)
