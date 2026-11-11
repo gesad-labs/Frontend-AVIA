@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 import LeaveProjectModal from '../../components/project/LeaveProjectModal'
 import styles from './ProjectsPage.module.css'
 
+import { getErrorMessage } from '../../utils/errors'
 /* ── Icons ── */
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -188,8 +189,8 @@ const MailSmIcon = () => (
 
 // papel = PapelProjeto.getNomePapel() (lowercase). GERENTE not atribuível.
 const ROLE_OPTIONS = [
-  { label: 'Membro',       value: 'membro',       Icon: MemIcon },
-  { label: 'Visualizador', value: 'visualizador',  Icon: EyeSmIcon },
+  { label: 'Membro', value: 'membro', Icon: MemIcon },
+  { label: 'Visualizador', value: 'visualizador', Icon: EyeSmIcon },
 ]
 
 const AVATAR_BG = ['#f97316', '#0891b2', '#7c3aed', '#0369a1', '#15803d']
@@ -205,15 +206,15 @@ function initials(name = '') {
 /* ── Novo Projeto Modal (two-panel, two-step) ── */
 function NovoProjetoModal({ onClose, onSuccess }) {
   const { user } = useAuth()
-  const [step, setStep]           = useState(1)
+  const [step, setStep] = useState(1)
   const [novoProjeto, setNovoProjeto] = useState(null)
-  const [form, setForm]           = useState({ nome: '', descricao: '', metodologia: '' })
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
+  const [form, setForm] = useState({ nome: '', descricao: '', metodologia: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   // step 2 — papel = PapelProjeto value, cargo = CargoProjeto default
   const [emailConvidado, setEmailConvidado] = useState('')
-  const [roleSel, setRoleSel]     = useState('membro')
-  const [staged, setStaged]       = useState([])   // { email, papel, nome }
+  const [roleSel, setRoleSel] = useState('membro')
+  const [staged, setStaged] = useState([])   // { email, papel, nome }
   const [addingMember, setAddingMember] = useState(false)
 
   const leftNote = step === 1
@@ -233,7 +234,7 @@ function NovoProjetoModal({ onClose, onSuccess }) {
       setNovoProjeto(novo)
       setStep(2)
     } catch (err) {
-      setError(err.body?.message ?? 'Erro ao criar projeto.')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -417,7 +418,7 @@ function NovoProjetoModal({ onClose, onSuccess }) {
 const STATUS_OPTIONS = [
   { label: 'Planejamento', Icon: CalendarIcon },
   { label: 'Em andamento', Icon: RefreshIcon },
-  { label: 'Concluído',    Icon: CheckCircleIcon },
+  { label: 'Concluído', Icon: CheckCircleIcon },
 ]
 
 function CardMenu({ projetoId, onClose, onStatusChange, onSair }) {
@@ -647,9 +648,9 @@ export default function ProjectsPage() {
   const filtered = projetos.filter(p => {
     const matchQuery = p.nome.toLowerCase().includes(query.toLowerCase())
     const matchFilter = filter === 'Todos'
-      || (filter === 'Em Andamento'  && (p._status || 'EM ANDAMENTO') === 'EM ANDAMENTO')
-      || (filter === 'Planejamento'  && p._status === 'PLANEJAMENTO')
-      || (filter === 'Concluídos'    && p._status === 'CONCLUÍDO')
+      || (filter === 'Em Andamento' && (p._status || 'EM ANDAMENTO') === 'EM ANDAMENTO')
+      || (filter === 'Planejamento' && p._status === 'PLANEJAMENTO')
+      || (filter === 'Concluídos' && p._status === 'CONCLUÍDO')
     return matchQuery && matchFilter
   })
 

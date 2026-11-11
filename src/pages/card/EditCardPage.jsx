@@ -6,6 +6,7 @@ import {
 } from '../../utils/anexos'
 import styles from './CardFormPage.module.css'
 
+import { getErrorMessage } from '../../utils/errors'
 const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
 
 const COLUMNS = [
@@ -81,14 +82,14 @@ export default function EditCardPage() {
         try {
           await projetoService.adicionarAnexo(projectId, tarefaId, arquivo)
         } catch (err) {
-          setError(`Alterações salvas, mas o arquivo não foi anexado: ${mensagemErroAnexo(err, 'erro ao enviar')}`)
+          setError(`Alterações salvas, mas o arquivo não foi anexado: ${mensagemErroAnexo(err)}`)
           setSaving(false)
           return
         }
       }
       navigate(`/project/${projectId}/board`)
-    } catch {
-      setError('Erro ao salvar.')
+    } catch (err) {
+      setError(getErrorMessage(err))
       setSaving(false)
     }
   }

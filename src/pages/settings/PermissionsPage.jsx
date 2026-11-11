@@ -11,19 +11,19 @@ const PERMISSION_GROUPS = [
     key: 'content',
     label: 'CONTEÚDO & TAREFAS',
     permissions: [
-      { key: 'Criar Tarefas',     label: 'Criar tarefas' },
-      { key: 'Criar Subtarefas',  label: 'Criar subtarefas' },
-      { key: 'Editar Tarefas',  label: 'Editar tarefas' },
+      { key: 'Criar Tarefas', label: 'Criar tarefas' },
+      { key: 'Criar Subtarefas', label: 'Criar subtarefas' },
+      { key: 'Editar Tarefas', label: 'Editar tarefas' },
       { key: 'Excluir Tarefas', label: 'Excluir tarefas' },
-      { key: 'Mover Tarefas',   label: 'Mover tarefas' },
+      { key: 'Mover Tarefas', label: 'Mover tarefas' },
     ],
   },
   {
     key: 'structure',
     label: 'ESTRUTURA DO PROJETO',
     permissions: [
-      { key: 'Criar Colunas',     label: 'Criar sprints' },
-      { key: 'Editar Estrutura',  label: 'Editar estrutura' },
+      { key: 'Criar Colunas', label: 'Criar sprints' },
+      { key: 'Editar Estrutura', label: 'Editar estrutura' },
       { key: 'Gerenciar Sprints', label: 'Gerenciar sprints' },
     ],
   },
@@ -34,8 +34,8 @@ const PERMISSION_GROUPS = [
 const SO_GERENTE = new Set(['Adicionar Membros', 'Atualizar Permissoes', 'Remover Membros'])
 
 const ROLE_META = {
-  Gerente:      { color: '#0369a1' },
-  Membro:       { color: '#1d4ed8' },
+  Gerente: { color: '#0369a1' },
+  Membro: { color: '#1d4ed8' },
   Visualizador: { color: '#7c3aed' },
 }
 
@@ -82,7 +82,7 @@ function Toggle({ checked, onChange, readOnly, disabled }) {
 
 /* ── Member card with lazy permission load ── */
 function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
-  const [apiPerms,  setApiPerms]  = useState(null)
+  const [apiPerms, setApiPerms] = useState(null)
   const [editPerms, setEditPerms] = useState(null)
   const [cardStatus, setCardStatus] = useState('idle') // 'idle'|'loading'|'saving'|'resetting'
   const [cardError, setCardError] = useState('')
@@ -115,7 +115,7 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
   }
 
   const isDirty = editPerms && apiPerms && !setsEqual(editPerms, apiPerms)
-  const busy    = cardStatus !== 'idle'
+  const busy = cardStatus !== 'idle'
 
   async function handleSave() {
     setCardStatus('saving')
@@ -126,7 +126,7 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
       setApiPerms(new Set(enviadas))
       setEditPerms(new Set(enviadas))
     } catch (err) {
-      setCardError(getErrorMessage(err, 'Erro ao salvar. Tente novamente.'))
+      setCardError(getErrorMessage(err))
     } finally {
       setCardStatus('idle')
     }
@@ -147,7 +147,7 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
       setApiPerms(set)
       setEditPerms(new Set(set))
     } catch (err) {
-      setCardError(getErrorMessage(err, 'Erro ao restaurar. Tente novamente.'))
+      setCardError(getErrorMessage(err))
     } finally {
       setCardStatus('idle')
     }
@@ -247,11 +247,11 @@ function MemberCard({ membro, projectId, expanded, onToggleExpand, isMe }) {
 /* ── Page ── */
 export default function PermissionsPage() {
   const { projectId } = useParams()
-  const { user }      = useAuth()
-  const [membros,    setMembros]    = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState('')
-  const [expanded,   setExpanded]   = useState(null)
+  const { user } = useAuth()
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [expanded, setExpanded] = useState(null)
   const [myIsGerente, setMyIsGerente] = useState(null) // null while loading
 
   const fetchMembros = useCallback(async () => {
@@ -262,8 +262,8 @@ export default function PermissionsPage() {
       setMembros(list)
       const me = list.find(m => m.email === user?.email)
       setMyIsGerente(me?.cargo === 'Gerente')
-    } catch {
-      setError('Erro ao carregar membros.')
+    } catch (err) {
+      setError(getErrorMessage(err))
       setMyIsGerente(false)
     } finally {
       setLoading(false)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils/errors'
 import styles from './ForgotPasswordPage.module.css'
 
 const RefreshIcon = () => (
@@ -35,7 +36,7 @@ export default function ForgotPasswordPage() {
     } catch (err) {
       if (err.status === 400) {
         // Real validation failure (malformed email) — show it
-        setError(err.body?.message ?? 'E-mail inválido.')
+        setError(getErrorMessage(err))
       } else {
         // Backend always returns 204 even if the e-mail doesn't exist
         // (anti-enumeration) — any other error still shows "sent"

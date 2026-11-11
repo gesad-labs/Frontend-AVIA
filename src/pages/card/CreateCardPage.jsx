@@ -6,6 +6,7 @@ import {
 } from '../../utils/anexos'
 import styles from './CardFormPage.module.css'
 
+import { getErrorMessage } from '../../utils/errors'
 const TIPO_OPTIONS = ['BUG', 'MELHORIA', 'TAREFA']
 
 const COLUMNS = [
@@ -78,14 +79,14 @@ export default function CreateCardPage() {
         } catch (err) {
           // O card já existe: leva o usuário até ele, com o motivo, para tentar anexar de novo.
           navigate(`/project/${projectId}/task/${nova.id}`, {
-            state: { avisoAnexo: `O card foi criado, mas o arquivo não foi anexado: ${mensagemErroAnexo(err, 'erro ao enviar')}` },
+            state: { avisoAnexo: `O card foi criado, mas o arquivo não foi anexado: ${mensagemErroAnexo(err)}` },
           })
           return
         }
       }
       navigate(`/project/${projectId}/board`)
-    } catch {
-      setError('Erro ao criar card.')
+    } catch (err) {
+      setError(getErrorMessage(err))
       setSaving(false)
     }
   }

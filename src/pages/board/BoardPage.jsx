@@ -444,7 +444,7 @@ function EditCardModal({ tarefa, projectId, membros, onClose, onSaved }) {
       })
       onSaved()
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao salvar.'))
+      setError(getErrorMessage(err))
       setSaving(false)
     }
   }
@@ -558,8 +558,8 @@ function AddCardModal({ sprint, projectId, defaultStatus, membros, onClose, onSa
         tipo:          tipo || null,
       })
       onSaved()
-    } catch {
-      setError('Erro ao criar card.')
+    } catch (err) {
+      setError(getErrorMessage(err))
       setSaving(false)
     }
   }
@@ -968,8 +968,8 @@ export default function BoardPage() {
       setSprint(active)
       const t = await projetoService.listarTarefas(projectId, active.id)
       setTarefas(Array.isArray(t) ? t : [])
-    } catch {
-      setError('Erro ao carregar o board.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -986,7 +986,7 @@ export default function BoardPage() {
       await projetoService.atualizarStatus(projectId, tarefaId, { status: novoStatus })
       await fetchAll()
     } catch (err) {
-      setAviso(getErrorMessage(err, 'Não foi possível mover o card.'))
+      setAviso(getErrorMessage(err))
     }
   }
 
@@ -1010,7 +1010,7 @@ export default function BoardPage() {
       await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.CONCLUIDA })
       navigate(`/project/${projectId}/backlog`)
     } catch (err) {
-      setAviso(getErrorMessage(err, 'Não foi possível encerrar a sprint.'))
+      setAviso(getErrorMessage(err))
       setClosingSprint(false)
     }
   }
@@ -1021,7 +1021,7 @@ export default function BoardPage() {
       await projetoService.removerTarefa(projectId, tarefa.id)
       setTarefas(prev => prev.filter(t => t.id !== tarefa.id))
     } catch (err) {
-      alert(getErrorMessage(err, 'Erro ao excluir.'))
+      alert(getErrorMessage(err))
     }
   }
 

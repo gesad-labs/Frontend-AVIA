@@ -1,5 +1,6 @@
 import { createContext, useState, useCallback } from 'react'
 import { api, setToken, clearToken, parseJwt } from '../services/api'
+import { getErrorMessage, mensagemSeguraDoBack } from '../utils/errors'
 
 export const AuthContext = createContext(null)
 
@@ -41,11 +42,9 @@ export function AuthProvider({ children }) {
       localStorage.setItem(USER_KEY, JSON.stringify(safeUser))
       return { success: true }
     } catch (err) {
-      // Spring Security returns 401 with { message } or generic body
-      const msg =
-        err.body?.message ??
-        err.body?.error   ??
-        'E-mail ou senha inválidos.'
+      // 401 no login = credencial inválida, mesmo que o back não mande texto utilizável.
+      const msg = mensagemSeguraDoBack(err)
+        ?? (err?.status === 401 ? 'E-mail ou senha inválidos.' : getErrorMessage(err))
       return { success: false, errors: { detail: msg } }
     } finally {
       setAuthLoading(false)
@@ -60,11 +59,7 @@ export function AuthProvider({ children }) {
       await api.post('/auth/cadastro', { nome: name, email, senha: password })
       return { success: true }
     } catch (err) {
-      const msg =
-        err.status === 409
-          ? (err.body?.message ?? 'E-mail já cadastrado. Use outro endereço.')
-          : (err.body?.message ?? 'Erro ao criar conta. Tente novamente.')
-      return { success: false, errors: { detail: msg } }
+      return { success: false, errors: { detail: getErrorMessage(err) } }
     } finally {
       setAuthLoading(false)
     }

@@ -133,8 +133,8 @@ function CreateSprintModal({ projectId, onClose, onCreated }) {
     try {
       await projetoService.criarSprint(projectId, { nome: nome.trim() })
       onCreated(); onClose()
-    } catch {
-      setError('Erro ao criar sprint.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -186,8 +186,8 @@ function MoveTaskModal({ tarefa, sprints, projectId, onClose, onMoved }) {
       const sprintId = targetVal === BACKLOG_VAL ? null : Number(targetVal)
       await projetoService.moverTarefa(projectId, tarefa.id, { sprintId })
       onMoved(); onClose()
-    } catch {
-      setError('Erro ao mover tarefa.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setMoving(false)
     }
@@ -254,8 +254,8 @@ function EditTaskModal({ tarefa, projectId, membros, onClose, onSaved }) {
         responsaveisIds: Array.from(responsaveisIds),
       })
       onSaved(); onClose()
-    } catch {
-      setError('Erro ao salvar.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -422,8 +422,8 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
       })
       setTitulo(''); setDescricao(''); setEstimativa(''); setPrioridade(''); setTipo(''); setResponsaveisIds(new Set())
       onAdded()
-    } catch {
-      setError('Erro ao criar card.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -495,7 +495,7 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
       await projetoService.removerTarefa(projectId, tarefa.id)
       onRefresh()
     } catch (err) {
-      alert(getErrorMessage(err, 'Erro ao remover.'))
+      alert(getErrorMessage(err))
     } finally {
       setRemoving(false)
     }
@@ -610,7 +610,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
       await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.ATIVA })
       onRefresh()
     } catch (err) {
-      onAviso(getErrorMessage(err, 'Não foi possível iniciar a sprint.'))
+      onAviso(getErrorMessage(err))
     } finally {
       setUpdatingSt(false)
     }
@@ -624,7 +624,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
       await projetoService.editarSprint(projectId, sprint.id, { status: SPRINT.CONCLUIDA })
       onRefresh()
     } catch (err) {
-      onAviso(getErrorMessage(err, 'Não foi possível encerrar a sprint.'))
+      onAviso(getErrorMessage(err))
     } finally {
       setUpdatingSt(false)
     }
@@ -774,8 +774,8 @@ export default function BacklogPage() {
         })
       )
       setSprintTarefas(tarefaMap)
-    } catch {
-      setError('Erro ao carregar backlog.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }

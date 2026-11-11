@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../services/api'
+import { getErrorMessage } from '../../utils/errors'
 import { temEspecialAceito } from '../../utils/senha'
 import styles from './ResetPasswordPage.module.css'
 
@@ -62,7 +63,7 @@ export default function ResetPasswordPage() {
       await api.post('/auth/redefinicao-senha', { token, novaSenha: form.password })
       navigate('/login')
     } catch (err) {
-      setError(err.body?.message ?? 'Token inválido ou expirado. Solicite um novo link.')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
