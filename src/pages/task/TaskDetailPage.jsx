@@ -12,26 +12,26 @@ import styles from './TaskDetailPage.module.css'
 
 /* ─── Constants ─────────────────────────────────────────────────────── */
 const STATUS_OPTIONS = [
-  { value: 'A_FAZER',   label: 'A Fazer' },
-  { value: 'FAZENDO',   label: 'Fazendo' },
-  { value: 'TESTE',     label: 'Em Teste' },
+  { value: 'A_FAZER', label: 'A Fazer' },
+  { value: 'FAZENDO', label: 'Fazendo' },
+  { value: 'TESTE', label: 'Em Teste' },
   { value: 'CONCLUIDA', label: 'Concluída' },
 ]
 const PRIORIDADE_OPTIONS = [
   { value: 'BAIXA', label: 'Baixa' },
   { value: 'MEDIA', label: 'Média' },
-  { value: 'ALTA',  label: 'Alta' },
+  { value: 'ALTA', label: 'Alta' },
 ]
 const STATUS_COLORS = {
-  A_FAZER:   { bg: '#f1f5f9', color: '#64748b' },
-  FAZENDO:   { bg: '#dbeafe', color: '#1d4ed8' },
-  TESTE:     { bg: '#fef9c3', color: '#a16207' },
+  A_FAZER: { bg: '#f1f5f9', color: '#64748b' },
+  FAZENDO: { bg: '#dbeafe', color: '#1d4ed8' },
+  TESTE: { bg: '#fef9c3', color: '#a16207' },
   CONCLUIDA: { bg: '#dcfce7', color: '#15803d' },
 }
 const PRIORIDADE_COLORS = {
   BAIXA: { bg: '#f0fdf4', color: '#16a34a', dot: '#22c55e' },
   MEDIA: { bg: '#fefce8', color: '#ca8a04', dot: '#eab308' },
-  ALTA:  { bg: '#fff7ed', color: '#c2410c', dot: '#f97316' },
+  ALTA: { bg: '#fff7ed', color: '#c2410c', dot: '#f97316' },
 }
 
 const AVATAR_COLORS = ['#6366f1', '#0891b2', '#f97316', '#15803d', '#be123c', '#7c3aed']
@@ -63,10 +63,10 @@ function fmtRelative(iso) {
   const now = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1)  return 'agora mesmo'
+  if (diffMin < 1) return 'agora mesmo'
   if (diffMin < 60) return `${diffMin}m atrás`
   const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24)  return `${diffH}h atrás`
+  if (diffH < 24) return `${diffH}h atrás`
   const diffD = Math.floor(diffH / 24)
   if (diffD === 1) return 'ontem'
   return `${diffD} dias atrás`
@@ -75,62 +75,62 @@ function fmtRelative(iso) {
 /* ─── Icons ──────────────────────────────────────────────────────────── */
 const IconAttach = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </svg>
 )
 const IconLink = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
   </svg>
 )
 const IconPoker = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="14" height="18" rx="2"/>
-    <path d="M8 9h2"/><path d="M8 13h4"/><path d="M8 17h2"/>
-    <path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>
+    <rect x="2" y="4" width="14" height="18" rx="2" />
+    <path d="M8 9h2" /><path d="M8 13h4" /><path d="M8 17h2" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2" />
   </svg>
 )
 const IconDownload = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 )
 const IconEye = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
   </svg>
 )
 
 const IconX = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 )
 const IconEdit = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 )
 const IconCheck = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 )
 const IconPlus = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 )
 const IconChevron = ({ open }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
     style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
-    <polyline points="6 9 12 15 18 9"/>
+    <polyline points="6 9 12 15 18 9" />
   </svg>
 )
 const IconSearch = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 )
 
@@ -187,10 +187,10 @@ function SideDropdown({ options, value, onChange, renderTrigger }) {
 
 /* ─── Modal: Adicionar anexo (arquivo) ──────────────────────────────── */
 function AnexarModal({ onClose, onAdd }) {
-  const [file,       setFile]       = useState(null)
+  const [file, setFile] = useState(null)
   const [arrastando, setArrastando] = useState(false)
-  const [busy,       setBusy]       = useState(false)
-  const [err,        setErr]        = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
   const inputRef = useRef(null)
 
   function escolher(f) {
@@ -209,7 +209,7 @@ function AnexarModal({ onClose, onAdd }) {
       await onAdd(file)
       onClose()
     } catch (e2) {
-      setErr(mensagemErroAnexo(e2, 'Não foi possível enviar o arquivo.'))
+      setErr(mensagemErroAnexo(e2))
       setBusy(false)
     }
   }
@@ -261,7 +261,7 @@ function AnexarModal({ onClose, onAdd }) {
 
 /* ─── Visualização de imagem anexada (busca o arquivo com o token) ──── */
 function AnexoPreview({ projectId, taskId, anexo, onBaixar, onClose }) {
-  const [url,  setUrl]  = useState(null)
+  const [url, setUrl] = useState(null)
   const [erro, setErro] = useState('')
 
   useEffect(() => {
@@ -269,7 +269,7 @@ function AnexoPreview({ projectId, taskId, anexo, onBaixar, onClose }) {
     let objeto = null
     projetoService.baixarAnexo(projectId, taskId, anexo.id)
       .then(blob => { if (vivo) { objeto = URL.createObjectURL(blob); setUrl(objeto) } })
-      .catch(err => { if (vivo) setErro(mensagemErroAnexo(err, 'Não foi possível carregar a imagem.')) })
+      .catch(err => { if (vivo) setErro(mensagemErroAnexo(err)) })
     return () => { vivo = false; if (objeto) URL.revokeObjectURL(objeto) }
   }, [projectId, taskId, anexo.id])
 
@@ -289,7 +289,7 @@ function AnexoPreview({ projectId, taskId, anexo, onBaixar, onClose }) {
         <div className={styles.previewBody}>
           {erro ? <p className={styles.fieldErr} role="alert">{erro}</p>
             : url ? <img src={url} alt={anexo.nome} className={styles.previewImg} />
-            : <p className={styles.descEmpty} style={{ color: '#cbd5e1' }}>Carregando...</p>}
+              : <p className={styles.descEmpty} style={{ color: '#cbd5e1' }}>Carregando...</p>}
         </div>
         <div className={styles.previewFooter}>
           <span className={styles.anexoMeta}>{metaDoAnexo(anexo)}</span>
@@ -304,17 +304,17 @@ function AnexoPreview({ projectId, taskId, anexo, onBaixar, onClose }) {
 
 /* ─── Modal: Vincular Tarefa ─────────────────────────────────────────── */
 function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) {
-  const [tasks,   setTasks]   = useState([])
-  const [search,  setSearch]  = useState('')
+  const [tasks, setTasks] = useState([])
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [busy,    setBusy]    = useState(false)
-  const [err,     setErr]     = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
 
   useEffect(() => {
     projetoService.listarTarefas(projectId)
       // Um subcard não pode ser pai de outro (regra do back): só lista cards de nível raiz.
       .then(data => setTasks(Array.isArray(data) ? data.filter(t => t.id !== Number(currentTaskId) && t.tarefaParenteId == null) : []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [projectId, currentTaskId])
 
@@ -329,7 +329,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
       await onLink(taskId)
       onClose()
     } catch (e) {
-      setErr(getErrorMessage(e, 'Não foi possível definir o card pai.'))
+      setErr(getErrorMessage(e))
       setBusy(false)
     }
   }
@@ -340,7 +340,7 @@ function VincularModal({ projectId, currentTaskId, parentId, onClose, onLink }) 
       await onLink(-1)
       onClose()
     } catch (e) {
-      setErr(getErrorMessage(e, 'Não foi possível desvincular o card.'))
+      setErr(getErrorMessage(e))
       setBusy(false)
     }
   }
@@ -402,37 +402,37 @@ export default function TaskDetailPage() {
   const { user } = useAuth()
 
   /* Core data */
-  const [tarefa,    setTarefa]    = useState(null)
-  const [membros,   setMembros]   = useState([])
+  const [tarefa, setTarefa] = useState(null)
+  const [membros, setMembros] = useState([])
   const [comentarios, setComentarios] = useState([])
-  const [anexos,    setAnexos]    = useState([])
+  const [anexos, setAnexos] = useState([])
   const [parentTask, setParentTask] = useState(null)
-  const [subcards,  setSubcards]  = useState([])
+  const [subcards, setSubcards] = useState([])
   const [todasTarefas, setTodasTarefas] = useState([])
-  const [notice,    setNotice]    = useState('')
+  const [notice, setNotice] = useState('')
   const [novoSubTitulo, setNovoSubTitulo] = useState('')
-  const [criandoSub,  setCriandoSub]  = useState(false)
-  const [preview,    setPreview]    = useState(null)
+  const [criandoSub, setCriandoSub] = useState(false)
+  const [preview, setPreview] = useState(null)
   // Quando o card é criado mas o anexo falha, a tela de criar manda o aviso por aqui.
-  const [anexoErro,  setAnexoErro]  = useState(() => location.state?.avisoAnexo ?? '')
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState('')
+  const [anexoErro, setAnexoErro] = useState(() => location.state?.avisoAnexo ?? '')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   /* UI state */
-  const [editingTitle,  setEditingTitle]  = useState(false)
-  const [titleDraft,    setTitleDraft]    = useState('')
-  const [editingDesc,   setEditingDesc]   = useState(false)
-  const [descDraft,     setDescDraft]     = useState('')
-  const [newComment,    setNewComment]    = useState('')
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [descDraft, setDescDraft] = useState('')
+  const [newComment, setNewComment] = useState('')
   const [postingComment, setPostingComment] = useState(false)
-  const [showAnexar,    setShowAnexar]    = useState(false)
-  const [showVincular,  setShowVincular]  = useState(false)
-  const [savingField,   setSavingField]   = useState(null)
-  const [storyEdit,     setStoryEdit]     = useState(false)
-  const [storyDraft,    setStoryDraft]    = useState('')
-  const [membrosOpen,   setMembrosOpen]   = useState(false)
-  const [mentionQuery,  setMentionQuery]  = useState(null)
-  const membrosRef  = useRef(null)
+  const [showAnexar, setShowAnexar] = useState(false)
+  const [showVincular, setShowVincular] = useState(false)
+  const [savingField, setSavingField] = useState(null)
+  const [storyEdit, setStoryEdit] = useState(false)
+  const [storyDraft, setStoryDraft] = useState('')
+  const [membrosOpen, setMembrosOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState(null)
+  const membrosRef = useRef(null)
   // O campo de comentário fica em estado (ref de callback): evita ler ref durante a renderização.
   const [commentEl, setCommentEl] = useState(null)
 
@@ -457,10 +457,10 @@ export default function TaskDetailPage() {
       if (t.tarefaParenteId) {
         projetoService.buscarTarefa(projectId, t.tarefaParenteId)
           .then(setParentTask)
-          .catch(() => {})
+          .catch(() => { })
       }
-    } catch {
-      setError('Erro ao carregar tarefa.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -483,7 +483,7 @@ export default function TaskDetailPage() {
     setTarefa(updated)
     if (updated.tarefaParenteId && updated.tarefaParenteId !== tarefa?.tarefaParenteId) {
       projetoService.buscarTarefa(projectId, updated.tarefaParenteId)
-        .then(setParentTask).catch(() => {})
+        .then(setParentTask).catch(() => { })
     } else if (!updated.tarefaParenteId) {
       setParentTask(null)
     }
@@ -497,7 +497,7 @@ export default function TaskDetailPage() {
       setTarefa(updated)
     } catch (err) {
       // 409: subcards pendentes / card bloqueado / pai concluído — o back explica o motivo.
-      setNotice(getErrorMessage(err, 'Não foi possível alterar o status.'))
+      setNotice(getErrorMessage(err))
     } finally { setSavingField(null) }
   }
 
@@ -523,17 +523,17 @@ export default function TaskDetailPage() {
     try {
       await projetoService.criarTarefa(projectId, {
         titulo,
-        descricao:       titulo,
-        status:          'A_FAZER',
-        prioridade:      tarefa.prioridade ?? 'MEDIA',
-        sprintId:        tarefa.sprintId ?? null,   // fica na mesma sprint do card pai
+        descricao: titulo,
+        status: 'A_FAZER',
+        prioridade: tarefa.prioridade ?? 'MEDIA',
+        sprintId: tarefa.sprintId ?? null,   // fica na mesma sprint do card pai
         tarefaParenteId: tarefa.id,
         responsaveisIds: [],
       })
       setNovoSubTitulo('')
       await recarregarRelacionados()
     } catch (err) {
-      setNotice(getErrorMessage(err, 'Não foi possível criar o subcard.'))
+      setNotice(getErrorMessage(err))
     } finally { setCriandoSub(false) }
   }
 
@@ -544,7 +544,7 @@ export default function TaskDetailPage() {
       const updated = await projetoService.editarTarefa(projectId, taskId, { bloqueadaPorId: predecessoraId })
       setTarefa(updated)
     } catch (err) {
-      setNotice(getErrorMessage(err, 'Não foi possível definir a dependência.'))
+      setNotice(getErrorMessage(err))
     } finally { setSavingField(null) }
   }
 
@@ -613,16 +613,16 @@ export default function TaskDetailPage() {
     setNewComment(val)
     const cursor = e.target.selectionStart
     const before = val.slice(0, cursor)
-    const match  = before.match(/@(\S*)$/)
+    const match = before.match(/@(\S*)$/)
     setMentionQuery(match ? match[1] : null)
   }
 
   function insertMention(membro) {
-    const el     = commentEl
+    const el = commentEl
     const cursor = el ? el.selectionStart : newComment.length
     const before = newComment.slice(0, cursor)
-    const after  = newComment.slice(cursor)
-    const match  = before.match(/@(\S*)$/)
+    const after = newComment.slice(cursor)
+    const match = before.match(/@(\S*)$/)
     const prefix = match ? before.slice(0, before.length - match[0].length) : before
     setNewComment(`${prefix}@${membro.nome} ${after}`)
     setMentionQuery(null)
@@ -657,7 +657,7 @@ export default function TaskDetailPage() {
       if (a.ehImagem) setPreview(a)
       else await abrirBlobEmNovaAba(() => projetoService.baixarAnexo(projectId, taskId, a.id), a.nome)
     } catch (err) {
-      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível abrir o anexo.'))
+      setAnexoErro(mensagemErroAnexo(err))
     }
   }
 
@@ -666,7 +666,7 @@ export default function TaskDetailPage() {
     try {
       salvarBlob(await projetoService.baixarAnexo(projectId, taskId, a.id), a.nome)
     } catch (err) {
-      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível baixar o anexo.'))
+      setAnexoErro(mensagemErroAnexo(err))
     }
   }
 
@@ -677,7 +677,7 @@ export default function TaskDetailPage() {
       await projetoService.removerAnexo(projectId, taskId, anexo.id)
       setAnexos(prev => prev.filter(a => a.id !== anexo.id))
     } catch (err) {
-      setAnexoErro(mensagemErroAnexo(err, 'Não foi possível remover o anexo.'))
+      setAnexoErro(mensagemErroAnexo(err))
     }
   }
 
@@ -698,9 +698,9 @@ export default function TaskDetailPage() {
   }
 
   const subcardsConcluidos = subcards.filter(s => s.status === 'CONCLUIDA').length
-  const anexosInfo     = anexos.map(lerAnexo)
-  const ehSubcard      = tarefa.tarefaParenteId != null
-  const predecessora   = tarefa.bloqueadaPorId != null
+  const anexosInfo = anexos.map(lerAnexo)
+  const ehSubcard = tarefa.tarefaParenteId != null
+  const predecessora = tarefa.bloqueadaPorId != null
     ? todasTarefas.find(x => x.id === tarefa.bloqueadaPorId) ?? null
     : null
   // O back recusa: a própria tarefa, o pai e os subcards. Cíclicos o back também recusa (409) e avisa.
@@ -939,7 +939,7 @@ export default function TaskDetailPage() {
             onChange={patchStatus}
             renderTrigger={val => {
               const opt = STATUS_OPTIONS.find(o => o.value === val)
-              const sc  = STATUS_COLORS[val] || STATUS_COLORS.A_FAZER
+              const sc = STATUS_COLORS[val] || STATUS_COLORS.A_FAZER
               return (
                 <span className={styles.statusChip} style={{ background: sc.bg, color: sc.color }}>
                   {opt?.label ?? val}
@@ -1020,7 +1020,7 @@ export default function TaskDetailPage() {
             onChange={setPrioridade}
             renderTrigger={val => {
               const opt = PRIORIDADE_OPTIONS.find(o => o.value === val)
-              const pc  = PRIORIDADE_COLORS[val] || PRIORIDADE_COLORS.BAIXA
+              const pc = PRIORIDADE_COLORS[val] || PRIORIDADE_COLORS.BAIXA
               return (
                 <span className={styles.prioChip} style={{ background: pc.bg, color: pc.color }}>
                   <span className={styles.prioDot} style={{ background: pc.dot }} />
@@ -1078,8 +1078,10 @@ export default function TaskDetailPage() {
               <span className={styles.linkedTaskId}>#{parentTask.id}</span>
               <span className={styles.linkedTaskTitle}>{parentTask.titulo}</span>
               <span className={styles.linkedTaskStatus}
-                style={{ background: (STATUS_COLORS[parentTask.status] || STATUS_COLORS.A_FAZER).bg,
-                         color: (STATUS_COLORS[parentTask.status] || STATUS_COLORS.A_FAZER).color }}>
+                style={{
+                  background: (STATUS_COLORS[parentTask.status] || STATUS_COLORS.A_FAZER).bg,
+                  color: (STATUS_COLORS[parentTask.status] || STATUS_COLORS.A_FAZER).color
+                }}>
                 {STATUS_OPTIONS.find(s => s.value === parentTask.status)?.label ?? parentTask.status}
               </span>
             </div>
@@ -1145,8 +1147,10 @@ export default function TaskDetailPage() {
               <span className={styles.linkedTaskTitle}>{predecessora?.titulo ?? 'Card não encontrado'}</span>
               {predecessora && (
                 <span className={styles.linkedTaskStatus}
-                  style={{ background: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).bg,
-                           color: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).color }}>
+                  style={{
+                    background: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).bg,
+                    color: (STATUS_COLORS[predecessora.status] || STATUS_COLORS.A_FAZER).color
+                  }}>
                   {STATUS_OPTIONS.find(o => o.value === predecessora.status)?.label ?? predecessora.status}
                 </span>
               )}

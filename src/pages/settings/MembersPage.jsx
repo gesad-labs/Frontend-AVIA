@@ -6,6 +6,7 @@ import LeaveProjectModal from '../../components/project/LeaveProjectModal'
 import { isGerente as isMembroGerente, temCargoGerente } from '../../utils/membros'
 import styles from './MembersPage.module.css'
 
+import { getErrorMessage } from '../../utils/errors'
 /* ── Icons ── */
 const PlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -67,24 +68,24 @@ const InfoIcon = () => (
 
 /* ── Constants ── */
 const PAPEL_OPTIONS = [
-  { label: 'Membro',       displayLabel: 'MEMBRO',       value: 'membro' },
+  { label: 'Membro', displayLabel: 'MEMBRO', value: 'membro' },
   { label: 'Visualizador', displayLabel: 'VISUALIZADOR', value: 'visualizador' },
 ]
 
 const CARGO_OPTIONS = [
-  { label: 'Scrum Master',           value: 'Scrum Master' },
-  { label: 'Desenvolvedor',          value: 'Desenvolvedor' },
-  { label: 'QA',                     value: 'QA' },
+  { label: 'Scrum Master', value: 'Scrum Master' },
+  { label: 'Desenvolvedor', value: 'Desenvolvedor' },
+  { label: 'QA', value: 'QA' },
   { label: 'Analista de Requisitos', value: 'Analista de Requisitos' },
-  { label: 'Designer de UI/UX',      value: 'Designer de UI/UX' },
-  { label: 'Arquiteto de Software',  value: 'Arquiteto de Software' },
-  { label: 'DevOps',                 value: 'DevOps' },
+  { label: 'Designer de UI/UX', value: 'Designer de UI/UX' },
+  { label: 'Arquiteto de Software', value: 'Arquiteto de Software' },
+  { label: 'DevOps', value: 'DevOps' },
 ]
 
 // papel vem como uppercase do backend: "GERENTE", "MEMBRO", "VISUALIZADOR"
 const PAPEL_BADGE = {
-  GERENTE:      { bg: '#dcfce7', color: '#15803d', label: 'Gerente' },
-  MEMBRO:       { bg: '#dbeafe', color: '#1d4ed8', label: 'Membro' },
+  GERENTE: { bg: '#dcfce7', color: '#15803d', label: 'Gerente' },
+  MEMBRO: { bg: '#dbeafe', color: '#1d4ed8', label: 'Membro' },
   VISUALIZADOR: { bg: '#ede9fe', color: '#7c3aed', label: 'Visualizador' },
 }
 
@@ -101,7 +102,7 @@ function initials(name = '') {
 function relTime(ts) {
   const diff = Date.now() - ts
   const mins = Math.floor(diff / 60000)
-  if (mins < 2)  return 'Enviado agora'
+  if (mins < 2) return 'Enviado agora'
   if (mins < 60) return `Enviado há ${mins}min`
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `Enviado há ${hours}h`
@@ -199,13 +200,13 @@ function Toast({ message, onClose }) {
 
 /* ── Modal de convite ── */
 function InviteModal({ projectId, onClose, onSuccess }) {
-  const [emails, setEmails]   = useState([])
-  const [papel, setPapel]     = useState('membro')
-  const [cargo, setCargo]     = useState('Desenvolvedor')
+  const [emails, setEmails] = useState([])
+  const [papel, setPapel] = useState('membro')
+  const [cargo, setCargo] = useState('Desenvolvedor')
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState([])
 
-  function addEmail(e)    { if (!emails.includes(e)) setEmails(prev => [...prev, e]) }
+  function addEmail(e) { if (!emails.includes(e)) setEmails(prev => [...prev, e]) }
   function removeEmail(e) { setEmails(prev => prev.filter(x => x !== e)) }
 
   async function handleSend() {
@@ -391,17 +392,17 @@ function ConfirmRemoveModal({ membro, onClose, onConfirm }) {
 
 /* ── Main page ── */
 export default function MembersPage() {
-  const { projectId }  = useParams()
-  const navigate       = useNavigate()
-  const { user }       = useAuth()
-  const [membros, setMembros]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState('')
+  const { projectId } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showInvite, setShowInvite] = useState(false)
   const [removingMembro, setRemovingMembro] = useState(null)
-  const [editingMembro, setEditingMembro]   = useState(null)
-  const [showLeave, setShowLeave]           = useState(false)
-  const [toast, setToast]           = useState(null)
+  const [editingMembro, setEditingMembro] = useState(null)
+  const [showLeave, setShowLeave] = useState(false)
+  const [toast, setToast] = useState(null)
   const hideToast = useCallback(() => setToast(null), [])
 
   const fetchMembros = useCallback(async () => {
@@ -409,8 +410,8 @@ export default function MembersPage() {
     try {
       const data = await projetoService.listarMembros(projectId)
       setMembros(Array.isArray(data) ? data : [])
-    } catch {
-      setError('Erro ao carregar membros.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -424,8 +425,8 @@ export default function MembersPage() {
       await projetoService.removerMembro(projectId, email)
       setToast('Membro removido do projeto.')
       fetchMembros()
-    } catch {
-      setToast('Erro ao remover membro. Tente novamente.')
+    } catch (err) {
+      setToast(getErrorMessage(err))
     }
   }
 
@@ -488,9 +489,9 @@ export default function MembersPage() {
             </thead>
             <tbody>
               {membros.map(m => {
-                const isGer  = isMembroGerente(m)
-                const isMe   = m.email === user?.email
-                const badge  = PAPEL_BADGE[m.papel?.toUpperCase()] ?? PAPEL_BADGE.MEMBRO
+                const isGer = isMembroGerente(m)
+                const isMe = m.email === user?.email
+                const badge = PAPEL_BADGE[m.papel?.toUpperCase()] ?? PAPEL_BADGE.MEMBRO
                 return (
                   <tr key={m.id} className={styles.tableRow}>
                     <td className={styles.tdMember}>

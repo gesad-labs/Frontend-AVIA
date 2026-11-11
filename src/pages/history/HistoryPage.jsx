@@ -53,7 +53,7 @@ export default function HistoryPage() {
                     setSprints(Array.isArray(s) ? s : [])
                     setMembros(Array.isArray(m) ? m : [])
                 } catch (err) {
-                    if (vivo) setErro(getErrorMessage(err, 'Não foi possível carregar o histórico.'))
+                    if (vivo) setErro(getErrorMessage(err))
                 } finally {
                     if (vivo) setCarregado(true)
                 }
@@ -71,7 +71,7 @@ export default function HistoryPage() {
         let vivo = true
         projetoService.filtrarHistorico(projectId, consulta)
             .then(lista => { if (vivo) setResultado({ chave, lista: Array.isArray(lista) ? lista : [] }) })
-            .catch(err => { if (vivo) setResultado({ chave, erro: getErrorMessage(err, 'Não foi possível aplicar os filtros.') }) })
+            .catch(err => { if (vivo) setResultado({ chave, erro: getErrorMessage(err) }) })
         return () => { vivo = false }
     }, [projectId, carregado, erro, noServidor, chave, consulta])
 

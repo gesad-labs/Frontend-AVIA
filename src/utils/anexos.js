@@ -79,13 +79,10 @@ export function metaDoAnexo(a) {
   return a.tamanho != null ? `${base} · ${formatarTamanho(a.tamanho)}` : base
 }
 
-/* Mensagem para o usuário a partir do erro do upload/download/remoção. */
-export function mensagemErroAnexo(err, fallback) {
-  switch (err?.status) {
-    case 413: return `O arquivo é maior que o limite de ${formatarTamanho(TAMANHO_MAXIMO)}.`
-    case 415: return `Tipo de arquivo não permitido. Envie ${TIPOS_LEGIVEIS}.`
-    default:  return getErrorMessage(err, fallback)
-  }
+/* Mensagem de erro de upload/download/remoção: a mesma regra de todo o sistema
+   (mensagem do back se for segura; senão a genérica). 413 e 415 já chegam com texto do back. */
+export function mensagemErroAnexo(err) {
+  return getErrorMessage(err)
 }
 
 /* ── Arquivos baixados do back (Blob) ── */

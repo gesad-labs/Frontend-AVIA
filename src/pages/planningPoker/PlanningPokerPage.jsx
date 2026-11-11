@@ -4,16 +4,17 @@ import { projetoService } from '../../services/projetoService'
 import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './PlanningPokerPage.module.css'
 
+import { getErrorMessage } from '../../utils/errors'
 /* ─── Fibonacci deck ─── */
 const FIBONACCI = [
-  { label: '1',  value: 1,  sub: 'STORY POINT'  },
-  { label: '2',  value: 2,  sub: 'STORY POINTS' },
-  { label: '3',  value: 3,  sub: 'STORY POINTS' },
-  { label: '5',  value: 5,  sub: 'STORY POINTS' },
-  { label: '8',  value: 8,  sub: 'STORY POINTS' },
+  { label: '1', value: 1, sub: 'STORY POINT' },
+  { label: '2', value: 2, sub: 'STORY POINTS' },
+  { label: '3', value: 3, sub: 'STORY POINTS' },
+  { label: '5', value: 5, sub: 'STORY POINTS' },
+  { label: '8', value: 8, sub: 'STORY POINTS' },
   { label: '13', value: 13, sub: 'STORY POINTS' },
   { label: '21', value: 21, sub: 'STORY POINTS' },
-  { label: '?',  value: 0,  sub: 'INCERTEZA'    },
+  { label: '?', value: 0, sub: 'INCERTEZA' },
 ]
 
 /* ─── Avatar ─── */
@@ -42,7 +43,7 @@ function Avatar({ nome, size = 34 }) {
 function IconCheckCircle() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12"/>
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }
@@ -78,40 +79,40 @@ function ParticipantRow({ p, isMe, cargo, mostrarValores }) {
 export default function PlanningPokerPage() {
   const { projectId, taskId } = useParams()
 
-  const [tarefa,      setTarefa]      = useState(null)
-  const [sessao,      setSessao]      = useState(null)
+  const [tarefa, setTarefa] = useState(null)
+  const [sessao, setSessao] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
-  const [membros,     setMembros]     = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [criando,     setCriando]     = useState(false)
-  const [selectedCard, setSelectedCard]       = useState(null)
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [criando, setCriando] = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
   const [estimativaInput, setEstimativaInput] = useState('')
   const stompRef = useRef(null)
 
   /* ─── Derived ─── */
-  const currentMembro  = membros.find(m => m.id === currentUser?.id)
-  const isGerente      = currentMembro?.cargo === 'Gerente' || currentMembro?.papel === 'gerente'
+  const currentMembro = membros.find(m => m.id === currentUser?.id)
+  const isGerente = currentMembro?.cargo === 'Gerente' || currentMembro?.papel === 'gerente'
 
-  const isVotando      = sessao?.status === 'VOTANDO'
-  const isRevelada     = sessao?.status === 'REVELADA'
-  const isFinalizada   = sessao?.status === 'FINALIZADA'
-  const isCancelada    = sessao?.status === 'CANCELADA'
-  const isAtiva        = isVotando || isRevelada
+  const isVotando = sessao?.status === 'VOTANDO'
+  const isRevelada = sessao?.status === 'REVELADA'
+  const isFinalizada = sessao?.status === 'FINALIZADA'
+  const isCancelada = sessao?.status === 'CANCELADA'
+  const isAtiva = isVotando || isRevelada
 
-  const myParticipant  = sessao?.participantes?.find(p => p.usuarioId === currentUser?.id)
-  const votouNaRodada  = myParticipant?.votou === true
-  const totalVotos     = sessao?.participantes?.filter(p => p.votou).length ?? 0
-  const totalPart      = sessao?.participantes?.length ?? 0
+  const myParticipant = sessao?.participantes?.find(p => p.usuarioId === currentUser?.id)
+  const votouNaRodada = myParticipant?.votou === true
+  const totalVotos = sessao?.participantes?.filter(p => p.votou).length ?? 0
+  const totalPart = sessao?.participantes?.length ?? 0
   const mostrarValores = isRevelada || isFinalizada
 
   const mediaVotos = mostrarValores
     ? (() => {
-        const vals = (sessao?.participantes ?? [])
-          .filter(p => p.valor != null && p.valor > 0)
-          .map(p => p.valor)
-        if (!vals.length) return null
-        return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-      })()
+      const vals = (sessao?.participantes ?? [])
+        .filter(p => p.valor != null && p.valor > 0)
+        .map(p => p.valor)
+      if (!vals.length) return null
+      return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+    })()
     : null
 
   /* ─── Load ─── */
@@ -172,8 +173,8 @@ export default function PlanningPokerPage() {
     try {
       const s = await projetoService.criarSessaoPoker(projectId, taskId)
       setSessao(s)
-    } catch {
-      alert('Erro ao criar sessão. Pode já existir uma sessão ativa.')
+    } catch (err) {
+      alert(getErrorMessage(err))
     } finally {
       setCriando(false)
     }
@@ -309,8 +310,8 @@ export default function PlanningPokerPage() {
           <div className={styles.cardGrid}>
             {FIBONACCI.map(({ label, value, sub }) => {
               const isSelected = selectedCard === value
-              const isMyVote   = mostrarValores && myParticipant?.valor === value
-              const active     = isSelected || isMyVote
+              const isMyVote = mostrarValores && myParticipant?.valor === value
+              const active = isSelected || isMyVote
 
               return (
                 <button

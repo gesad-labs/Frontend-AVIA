@@ -5,15 +5,10 @@ import { temCargoGerente } from '../../utils/membros'
 import { getErrorMessage } from '../../utils/errors'
 import styles from './LeaveProjectModal.module.css'
 
-function mensagemDeErro(err, etapa, promovido) {
-  let msg
-  if (err?.status === 403) {
-    msg = etapa === 'promover'
-      ? 'Não foi possível transferir a gerência: seu usuário não tem permissão para essa ação.'
-      : 'Você não tem permissão para sair deste projeto. Peça a um gerente para remover você.'
-  } else {
-    msg = getErrorMessage(err, 'Erro ao sair do projeto. Tente novamente.')
-  }
+/* A mensagem do back vale também no 403. Se o sucessor já foi promovido e só a saída falhou,
+   avisa que o projeto agora tem 2 gerentes. */
+function mensagemDeErro(err, promovido) {
+  const msg = getErrorMessage(err)
   return promovido ? `${msg} (O novo gerente já foi definido; você pode tentar sair novamente.)` : msg
 }
 
@@ -30,7 +25,7 @@ export default function LeaveProjectModal({ projectId, projectName, onClose, onL
     let cancelled = false
     projetoService.listarMembros(projectId)
       .then(data => { if (!cancelled) setMembros(Array.isArray(data) ? data : []) })
-      .catch(err => { if (!cancelled) setLoadError(getErrorMessage(err, 'Não foi possível carregar os membros do projeto.')) })
+      .catch(err => { if (!cancelled) setLoadError(getErrorMessage(err)) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [projectId])
@@ -50,19 +45,16 @@ export default function LeaveProjectModal({ projectId, projectName, onClose, onL
 
   async function handleConfirm() {
     setSubmitting(true); setError('')
-    let etapa = 'sair'
     let promovido = false
     try {
       if (precisaSucessor) {
-        etapa = 'promover'
         await projetoService.atualizarMembro(projectId, successorId, { cargo: 'GERENTE', papel: 'gerente' })
         promovido = true
-        etapa = 'sair'
       }
       await projetoService.removerMembro(projectId, me.email)
       onLeft?.()
     } catch (err) {
-      setError(mensagemDeErro(err, etapa, promovido))
+      setError(mensagemDeErro(err, promovido))
       setSubmitting(false)
     }
   }
