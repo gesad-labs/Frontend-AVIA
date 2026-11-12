@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import styles from './LoginPage.module.css'
 
+import { MENSAGEM_GENERICA } from '../../utils/errors'
 function EyeIcon({ open }) {
   return open ? (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,13 +41,7 @@ export default function LoginPage() {
     if (result.success) {
       navigate(from, { replace: true })
     } else {
-      const err = result.errors
-      const msg =
-        err?.detail ||
-        err?.non_field_errors?.[0] ||
-        err?.message ||
-        'E-mail ou senha inválidos.'
-      setError(msg)
+      setError(result.errors?.detail || MENSAGEM_GENERICA)
     }
   }
 
