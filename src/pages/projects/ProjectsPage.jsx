@@ -4,6 +4,7 @@ import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
 import LeaveProjectModal from '../../components/project/LeaveProjectModal'
 import styles from './ProjectsPage.module.css'
+import { souGerenteDoProjeto } from '../../utils/membros'
 
 import { getErrorMessage } from '../../utils/errors'
 /* ── Icons ── */
@@ -25,13 +26,6 @@ const XIcon = () => (
 const MoreIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
     <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
-  </svg>
-)
-const ExitIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 )
 const ChevronLeftIcon = () => (
@@ -88,12 +82,6 @@ const RefreshIcon = () => (
   </svg>
 )
 
-const LinkIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-)
 const SettingsIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
@@ -113,9 +101,29 @@ const ListIcon = () => (
   </svg>
 )
 
-const FolderOpenIcon = () => (
+/* Icones do menu de contexto do card (14px viram 18px via CSS) */
+const ExternalLinkIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+  </svg>
+)
+const LeaveArrowIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 17v-1a5 5 0 0 1 5-5h11" /><polyline points="16 7 21 11 16 15" />
+  </svg>
+)
+const ArchiveIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="5" rx="1" />
+    <path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+    <path d="M12 11v6" /><polyline points="9 14 12 17 15 14" />
+  </svg>
+)
+const CopyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 )
 
@@ -161,6 +169,21 @@ function saveStatus(id, status) {
     const saved = loadSavedStatuses()
     saved[String(id)] = status
     localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
+  } catch { /* ignore quota/parse errors */ }
+}
+
+/* ── Projetos arquivados (localStorage) ──
+   Nao existe endpoint de arquivar no back; guarda so neste navegador. */
+const ARCHIVED_LS_KEY = 'avia_project_archived'
+function loadArchivedIds() {
+  try { return JSON.parse(localStorage.getItem(ARCHIVED_LS_KEY) || '[]') }
+  catch { return [] }
+}
+function saveArchivedId(id) {
+  try {
+    const ids = loadArchivedIds()
+    if (!ids.includes(String(id))) ids.push(String(id))
+    localStorage.setItem(ARCHIVED_LS_KEY, JSON.stringify(ids))
   } catch { /* ignore quota/parse errors */ }
 }
 
@@ -421,7 +444,7 @@ const STATUS_OPTIONS = [
   { label: 'Concluído', Icon: CheckCircleIcon },
 ]
 
-function CardMenu({ projetoId, onClose, onStatusChange, onSair }) {
+function CardMenu({ projetoId, onClose, onStatusChange, onSair, onArquivar, podeAlterarStatus }) {
   const navigate = useNavigate()
   const [showStatus, setShowStatus] = useState(false)
   const ref = useRef(null)
@@ -442,56 +465,59 @@ function CardMenu({ projetoId, onClose, onStatusChange, onSair }) {
   return (
     <div className={styles.contextMenu} ref={ref} onClick={e => e.stopPropagation()}>
       <button className={styles.contextItem} onClick={() => { navigate(`/project/${projetoId}`); onClose() }}>
-        <FolderOpenIcon /> Abrir projeto
+        <ExternalLinkIcon /> Abrir projeto
       </button>
-      <div
-        className={`${styles.contextItem} ${styles.contextItemSub} ${showStatus ? styles.contextItemSubOpen : ''}`}
-        onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
-      >
-        <span className={styles.contextItemLeft}><RefreshIcon /> Alterar status</span>
-        <span className={`${styles.contextChevron} ${showStatus ? styles.contextChevronOpen : ''}`}>
-          <ChevronRightSmIcon />
-        </span>
-        {showStatus && (
-          <div className={styles.contextSubmenu}>
-            {STATUS_OPTIONS.map(({ label, Icon }) => (
-              <button
-                key={label}
-                className={styles.contextItem}
-                onClick={e => { e.stopPropagation(); onStatusChange(projetoId, label); onClose() }}
-              >
-                <Icon /> {label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {podeAlterarStatus && (
+        <div
+          className={`${styles.contextItem} ${styles.contextItemSub} ${showStatus ? styles.contextItemSubOpen : ''}`}
+          onClick={e => { e.stopPropagation(); setShowStatus(v => !v) }}
+        >
+          <span className={styles.contextItemLeft}><RefreshIcon /> Alterar status</span>
+          <span className={`${styles.contextChevron} ${showStatus ? styles.contextChevronOpen : ''}`}>
+            <ChevronRightSmIcon />
+          </span>
+          {showStatus && (
+            <div className={styles.contextSubmenu}>
+              {STATUS_OPTIONS.map(({ label, Icon }) => (
+                <button
+                  key={label}
+                  className={styles.contextItem}
+                  onClick={e => { e.stopPropagation(); onStatusChange(projetoId, label); onClose() }}
+                >
+                  <Icon /> {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className={styles.contextDivider} />
+
+      <button className={styles.contextItem} onClick={() => { onArquivar(projetoId); onClose() }}>
+        <ArchiveIcon /> Arquivar projeto
+      </button>
 
       <div className={styles.contextDivider} />
 
       <button className={styles.contextItem} onClick={copyLink}>
-        <LinkIcon /> Copiar link
+        <CopyIcon /> Copiar link
       </button>
       <button className={styles.contextItem} onClick={() => { navigate(`/project/${projetoId}/settings`); onClose() }}>
         <SettingsIcon /> Ir para configurações
-      </button>
-
-      <div className={styles.contextDivider} />
-
-      <button className={`${styles.contextItem} ${styles.contextItemDanger}`} onClick={() => { onSair(projetoId); onClose() }}>
-        <ExitIcon /> Sair do projeto
       </button>
     </div>
   )
 }
 
 /* ── Project List Row ── */
-function ProjectListRow({ projeto, onStatusChange, onSair }) {
+function ProjectListRow({ projeto, onStatusChange, onSair, onArquivar }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg } = getTheme(projeto.id)
   const ini = (projeto.nome || 'P').slice(0, 2).toUpperCase()
   const status = projeto._status || 'EM ANDAMENTO'
+  const podeAlterarStatus = souGerenteDoProjeto(projeto)
 
   return (
     <div className={`${styles.listRow} ${menuOpen ? styles.listRowMenuActive : ''}`} onClick={() => navigate(`/project/${projeto.id}`)}>
@@ -526,6 +552,8 @@ function ProjectListRow({ projeto, onStatusChange, onSair }) {
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
             onSair={onSair}
+            onArquivar={onArquivar}
+            podeAlterarStatus = {podeAlterarStatus}
           />
         )}
       </div>
@@ -535,12 +563,13 @@ function ProjectListRow({ projeto, onStatusChange, onSair }) {
 }
 
 /* ── Project Card ── */
-function ProjectCard({ projeto, onStatusChange, onSair }) {
+function ProjectCard({ projeto, onStatusChange, onSair, onArquivar }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg, Icon } = getTheme(projeto.id)
   const initials = (projeto.nome || 'P').slice(0, 2).toUpperCase()
   const status = projeto._status || 'EM ANDAMENTO'
+  const podeAlterarStatus = souGerenteDoProjeto(projeto)
 
   return (
     <div className={`${styles.card} ${menuOpen ? styles.cardMenuActive : ''}`} onClick={() => navigate(`/project/${projeto.id}`)}>
@@ -565,6 +594,8 @@ function ProjectCard({ projeto, onStatusChange, onSair }) {
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
             onSair={onSair}
+            onArquivar={onArquivar}
+            podeAlterarStatus = {podeAlterarStatus}
           />
         )}
       </div>
@@ -636,7 +667,12 @@ export default function ProjectsPage() {
     try {
       const data = await projetoService.listar()
       const saved = loadSavedStatuses()
-      setProjetos(data.map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p))
+      const archived = loadArchivedIds()
+      setProjetos(
+        data
+          .filter(p => !archived.includes(String(p.id)))
+          .map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p)
+      )
     }
     catch { setError('Erro ao carregar projetos.') }
     finally { setLoading(false) }
@@ -678,7 +714,13 @@ export default function ProjectsPage() {
     setLeaving(null)
   }
 
+  function handleArquivar(id) {
+    // por enquanto nao tem chamada de api para arquivar
+  }
+
   function handleStatusChange(id, label) {
+    const projeto = projetos.find(p => p.id === id)
+    if(!souGerenteDoProjeto(projeto)) return
     const map = { 'Em andamento': 'EM ANDAMENTO', 'Planejamento': 'PLANEJAMENTO', 'Concluído': 'CONCLUÍDO' }
     const newStatus = map[label]
     setProjetos(prev => prev.map(p => p.id === id ? { ...p, _status: newStatus } : p))
@@ -739,13 +781,13 @@ export default function ProjectsPage() {
       ) : view === 'grid' ? (
         <div className={styles.grid}>
           {paginated.map(p => (
-            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
+            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} onArquivar={handleArquivar} />
           ))}
         </div>
       ) : (
         <div className={styles.listView}>
           {paginated.map(p => (
-            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
+            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} onArquivar={handleArquivar} />
           ))}
         </div>
       )}

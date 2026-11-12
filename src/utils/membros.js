@@ -3,6 +3,9 @@
 export function isGerente(membro) {
   return membro?.papel?.toUpperCase() === 'GERENTE' || membro?.cargo === 'Gerente'
 }
+export function souGerenteDoProjeto(projeto) {
+  return projeto?.meuPapel?.toUpperCase() === 'GERENTE'
+}
 
 export function temCargoGerente(membro) {
   return membro?.cargo === 'Gerente'
