@@ -108,11 +108,6 @@ const ExternalLinkIcon = () => (
     <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
   </svg>
 )
-const LeaveArrowIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 17v-1a5 5 0 0 1 5-5h11" /><polyline points="16 7 21 11 16 15" />
-  </svg>
-)
 const ArchiveIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="5" rx="1" />
@@ -178,13 +173,6 @@ const ARCHIVED_LS_KEY = 'avia_project_archived'
 function loadArchivedIds() {
   try { return JSON.parse(localStorage.getItem(ARCHIVED_LS_KEY) || '[]') }
   catch { return [] }
-}
-function saveArchivedId(id) {
-  try {
-    const ids = loadArchivedIds()
-    if (!ids.includes(String(id))) ids.push(String(id))
-    localStorage.setItem(ARCHIVED_LS_KEY, JSON.stringify(ids))
-  } catch { /* ignore quota/parse errors */ }
 }
 
 /* ── Role icons for step 2 ── */
