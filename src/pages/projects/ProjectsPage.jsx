@@ -167,8 +167,7 @@ function saveStatus(id, status) {
   } catch { /* ignore quota/parse errors */ }
 }
 
-/* ── Projetos arquivados (localStorage) ──
-   Nao existe endpoint de arquivar no back; guarda so neste navegador. */
+/* ── Projetos arquivados (localStorage) ── */
 const ARCHIVED_LS_KEY = 'avia_project_archived'
 function loadArchivedIds() {
   try { return JSON.parse(localStorage.getItem(ARCHIVED_LS_KEY) || '[]') }
@@ -432,7 +431,7 @@ const STATUS_OPTIONS = [
   { label: 'Concluído', Icon: CheckCircleIcon },
 ]
 
-function CardMenu({ projetoId, onClose, onStatusChange, onSair, onArquivar, podeAlterarStatus }) {
+function CardMenu({ projetoId, onClose, onStatusChange, onArquivar, podeAlterarStatus }) {
   const navigate = useNavigate()
   const [showStatus, setShowStatus] = useState(false)
   const ref = useRef(null)
@@ -702,9 +701,6 @@ export default function ProjectsPage() {
     setLeaving(null)
   }
 
-  function handleArquivar(id) {
-    // por enquanto nao tem chamada de api para arquivar
-  }
 
   function handleStatusChange(id, label) {
     const projeto = projetos.find(p => p.id === id)
@@ -769,13 +765,13 @@ export default function ProjectsPage() {
       ) : view === 'grid' ? (
         <div className={styles.grid}>
           {paginated.map(p => (
-            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} onArquivar={handleArquivar} />
+            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
           ))}
         </div>
       ) : (
         <div className={styles.listView}>
           {paginated.map(p => (
-            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} onArquivar={handleArquivar} />
+            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair}  />
           ))}
         </div>
       )}
