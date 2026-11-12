@@ -1,0 +1,104 @@
+name: Auto-merge
+
+# Faz o merge via rebase na develop quando o PR tem aprovações suficientes e todos os checks verdes.
+# Só roda em evento (review aprovado ou CI concluído com sucesso); jobs filtrados pelo "if" não gastam minutos.
+# Para o merge disparar outros workflows (ex.: deploy-status), crie o segredo AUTOMERGE_TOKEN (PAT ou GitHub App).
+# Mínimo de aprovações: variável do repositório AUTOMERGE_MIN_APPROVALS (padrão 2).
+# Para impedir o merge automático de um PR, use a label no-auto-merge.
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    name: Auto-merge
+    if: >-
+      (github.event_name == 'pull_request_review'
+        && github.event.review.state == 'approved'
+        && github.event.pull_request.base.ref == 'develop')
+      || (github.event_name == 'workflow_run'
+        && github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.event == 'pull_request')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+      REPO: ${{ github.repository }}
+      MIN_APPROVALS: ${{ vars.AUTOMERGE_MIN_APPROVALS || '2' }}
+      EVENT_NAME: ${{ github.event_name }}
+      REVIEW_PR: ${{ github.event.pull_request.number }}
+      RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Avalia e faz o merge
+        run: |
+          if [ "$EVENT_NAME" = "pull_request_review" ]; then
+            PRS="$REVIEW_PR"
+          else
+            PRS=$(gh api "repos/$REPO/commits/$RUN_SHA/pulls" --jq '.[] | select(.state=="open" and .base.ref=="develop") | .number')
+          fi
+
+          if [ -z "$PRS" ]; then
+            echo "Nenhum PR aberto para a develop."
+            exit 0
+          fi
+
+          for PR in $PRS; do
+            echo "::group::PR #$PR"
+            INFO=$(gh pr view "$PR" --repo "$REPO" --json state,isDraft,baseRefName,headRefOid,labels)
+            STATE=$(jq -r .state <<<"$INFO")
+            DRAFT=$(jq -r .isDraft <<<"$INFO")
+            BASE=$(jq -r .baseRefName <<<"$INFO")
+            SHA=$(jq -r .headRefOid <<<"$INFO")
+            BLOCKED=$(jq -r '[.labels[].name] | index("no-auto-merge") != null' <<<"$INFO")
+
+            if [ "$STATE" != "OPEN" ] || [ "$DRAFT" = "true" ] || [ "$BASE" != "develop" ] || [ "$BLOCKED" = "true" ]; then
+              echo "Ignorado (estado=$STATE, draft=$DRAFT, base=$BASE, bloqueado=$BLOCKED)."
+              echo "::endgroup::"
+              continue
+            fi
+
+            REVIEWS=$(gh api "repos/$REPO/pulls/$PR/reviews" --paginate --jq '.[]' | jq -s '
+              map(select(.state=="APPROVED" or .state=="CHANGES_REQUESTED" or .state=="DISMISSED"))
+              | group_by(.user.login)
+              | map(max_by(.submitted_at))')
+            APPROVALS=$(jq --arg sha "$SHA" '[.[] | select(.state=="APPROVED" and .commit_id==$sha)] | length' <<<"$REVIEWS")
+            CHANGES=$(jq '[.[] | select(.state=="CHANGES_REQUESTED")] | length' <<<"$REVIEWS")
+
+            if [ "$CHANGES" -gt 0 ] || [ "$APPROVALS" -lt "$MIN_APPROVALS" ]; then
+              echo "Aguardando review (aprovações=$APPROVALS/$MIN_APPROVALS, mudanças pedidas=$CHANGES)."
+              echo "::endgroup::"
+              continue
+            fi
+
+            CHECKS=$(gh api "repos/$REPO/commits/$SHA/check-runs" --paginate --jq '.check_runs[]' | jq -s '[.[] | select(.name != "Auto-merge")]')
+            TOTAL=$(jq length <<<"$CHECKS")
+            PENDING=$(jq '[.[] | select(.status != "completed")] | length' <<<"$CHECKS")
+            FAILED=$(jq '[.[] | select(.status == "completed" and (.conclusion | IN("success","skipped","neutral") | not))] | length' <<<"$CHECKS")
+
+            if [ "$TOTAL" -eq 0 ] || [ "$PENDING" -gt 0 ] || [ "$FAILED" -gt 0 ]; then
+              echo "Aguardando CI (checks=$TOTAL, pendentes=$PENDING, falhos=$FAILED)."
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "Aprovado ($APPROVALS) e CI verde: merge via rebase."
+            if ! gh pr merge "$PR" --repo "$REPO" --rebase --delete-branch --match-head-commit "$SHA"; then
+              gh pr comment "$PR" --repo "$REPO" --body "Auto-merge não conseguiu fazer o rebase (conflito ou branch desatualizada). Atualize a branch com a develop e envie de novo."
+              echo "::endgroup::"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
