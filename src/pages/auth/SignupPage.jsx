@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { SENHA_TAMANHO_MAXIMO, temEspecialAceito } from '../../utils/senha'
 import styles from './SignupPage.module.css'
 
+import { MENSAGEM_GENERICA } from '../../utils/errors'
 const EyeOpen = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -34,7 +36,7 @@ export default function SignupPage() {
     { label: 'Mínimo de 8 caracteres',        met: form.password.length >= 8 },
     { label: 'Mínimo de uma letra maiúscula',  met: /[A-Z]/.test(form.password) },
     { label: 'Mínimo de número',               met: /\d/.test(form.password) },
-    { label: 'Mínimo de um caractere especial', met: /[^A-Za-z0-9]/.test(form.password) },
+    { label: 'Mínimo de um caractere especial (ex.: ! @ # $ %)', met: temEspecialAceito(form.password) },
   ]
 
   async function handleSubmit(e) {
@@ -44,14 +46,7 @@ export default function SignupPage() {
     if (result.success) {
       navigate('/login')
     } else {
-      const err = result.errors
-      const msg =
-        err?.message ||
-        err?.detail ||
-        err?.email?.[0] ||
-        err?.name?.[0] ||
-        'Erro ao criar conta. Tente novamente.'
-      setError(msg)
+      setError(result.errors?.detail || MENSAGEM_GENERICA)
     }
   }
 
@@ -103,6 +98,7 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type={showPass ? 'text' : 'password'}
+                  maxLength={SENHA_TAMANHO_MAXIMO}
                   placeholder="••••••••"
                   value={form.password}
                   onChange={handleChange}
