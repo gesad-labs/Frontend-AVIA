@@ -7,11 +7,7 @@ const ProjectContext = createContext(null);
  * Feed it with data from your API (src/services/projectService.js).
  */
 export function ProjectProvider({ children }) {
-  const [projects, setProjects] = useState([
-    { id: '1', name: 'APS', subtitle: 'ANÁLISE E PROJETO DE SISTEMAS', color: '#0891b2' },
-    { id: '2', name: 'AVIA', subtitle: 'GERENCIADOR DE PROJETOS', color: '#02214E' },
-    { id: '3', name: 'TCC', subtitle: 'TRABALHO DE CONCLUSÃO DE CURSO', color: '#7c3aed' },
-  ]);
+  const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
   const [loading, setLoading]             = useState(false);
 
