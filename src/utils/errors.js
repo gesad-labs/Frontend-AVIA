@@ -10,6 +10,15 @@
    Formato do back (ErroResponseDTO): { mensagem, erros? }
      erros = { campo: ["mensagem do campo", ...] }   (validação, HTTP 400)
 
+   ORDEM DAS MENSAGENS DE VALIDAÇÃO — o back NÃO garante ordem: ele monta `erros` a partir de
+   um conjunto sem ordem do Hibernate Validator, então a ordem dos campos e a das mensagens de
+   um mesmo campo mudam de uma requisição para outra. O front não pode herdar esse sorteio, senão
+   as mesmas entradas mostram textos diferentes. Por isso a ordem é definida AQUI:
+     • campos: na ordem do formulário (opcoes.ordemCampos), ou na padrão abaixo; o que não
+       estiver na lista vai depois, em ordem alfabética;
+     • mensagens de um campo: se há uma "obrigatório/a" (campo vazio), só ela aparece — as demais
+       regras (tamanho, maiúscula...) são consequência de estar vazio; senão, ordem alfabética.
+
    `err` é o objeto lançado por services/api.js: { status, body }.
    Falha de rede lança TypeError, sem status. Qualquer OUTRO erro de JavaScript
    (um bug) nunca tem o texto exibido: vira a mensagem genérica.
@@ -33,6 +42,13 @@ const MENSAGEM_POR_STATUS = {
 }
 
 const TAMANHO_MAXIMO = 300
+
+/* Ordem padrão dos campos em mensagens de validação. Formulários específicos podem passar a sua
+   própria em getErrorMessage(err, { ordemCampos: [...] }). */
+const ORDEM_CAMPOS_PADRAO = ['nome', 'email', 'senha', 'novasenha', 'confirmarsenha', 'confirmacaosenha']
+const MAX_MENSAGENS_DE_CAMPOS = 6
+const COLETOR = new Intl.Collator('pt-BR', { sensitivity: 'base' })   // comparação estável entre execuções
+const EH_OBRIGATORIA = /obrigat[óo]ri[oa]s?/i
 
 /* ── O que NÃO pode aparecer na tela ── */
 const PADROES_SENSIVEIS = [
@@ -105,9 +121,29 @@ export function ehErroDeConexao(err) {
   return err instanceof TypeError || /failed to fetch|networkerror|load failed|network request failed/i.test(String(err.message ?? ''))
 }
 
-function mensagensDeCampos(body) {
+function ordenarCampos(chaves, ordemCampos) {
+  const ordem = (ordemCampos ?? ORDEM_CAMPOS_PADRAO).map(c => String(c).toLowerCase())
+  const posicao = c => { const i = ordem.indexOf(String(c).toLowerCase()); return i < 0 ? Infinity : i }
+  return [...chaves].sort((a, b) => (posicao(a) - posicao(b)) || COLETOR.compare(a, b))
+}
+
+/* Mensagens dos campos, em ordem estável (veja o cabeçalho do arquivo). */
+function mensagensDeCampos(body, ordemCampos) {
   if (!body || typeof body !== 'object' || !body.erros || typeof body.erros !== 'object') return []
-  return Object.values(body.erros).flat().filter(m => typeof m === 'string')
+  const erros = body.erros
+  const lista = []
+  for (const campo of ordenarCampos(Object.keys(erros), ordemCampos)) {
+    const valores = [].concat(erros[campo]).filter(m => typeof m === 'string' && ehMensagemSegura(m)).map(m => m.trim())
+    const unicas = [...new Set(valores)]
+    const obrigatorias = unicas.filter(m => EH_OBRIGATORIA.test(m))
+    lista.push(...(obrigatorias.length > 0 ? obrigatorias : unicas).sort(COLETOR.compare))
+  }
+  return [...new Set(lista)]
+}
+
+/* "O nome é obrigatório" + "O e-mail é obrigatório" → "O nome é obrigatório. O e-mail é obrigatório." */
+function juntarMensagens(mensagens) {
+  return mensagens.slice(0, MAX_MENSAGENS_DE_CAMPOS).map(m => (/[.!?]$/.test(m) ? m : `${m}.`)).join(' ')
 }
 
 function mensagemPrincipal(body) {
@@ -118,13 +154,13 @@ function mensagemPrincipal(body) {
 
 /* Lê o erro e diz o que ele é, sem decidir o texto.
    tipo: 'conexao' | 'js' | 'segura' | 'sensivel' | 'invalida' */
-function analisar(err) {
+function analisar(err, opcoes) {
   if (ehErroDeConexao(err)) return { tipo: 'conexao' }
   if (err?.status == null) return { tipo: 'js' }                  // erro de JavaScript: nunca mostra o texto
 
   // Erros de validação: as mensagens dos campos dizem mais que "Dados inválidos"
-  const campos = [...new Set(mensagensDeCampos(err.body).filter(ehMensagemSegura).map(m => m.trim()))]
-  if (campos.length > 0) return { tipo: 'segura', mensagem: campos.slice(0, 3).join(' ') }
+  const campos = mensagensDeCampos(err.body, opcoes?.ordemCampos)
+  if (campos.length > 0) return { tipo: 'segura', mensagem: juntarMensagens(campos) }
 
   const mensagem = mensagemPrincipal(err.body)
   const tipo = classificarMensagem(mensagem)
@@ -133,17 +169,17 @@ function analisar(err) {
 
 /* A mensagem do back, SE ela for válida e segura; senão null. Útil quando a tela quer um
    texto próprio para o caso "o back não disse nada" (ex.: 401 no login = credencial inválida). */
-export function mensagemSeguraDoBack(err) {
-  const a = analisar(err)
+export function mensagemSeguraDoBack(err, opcoes) {
+  const a = analisar(err, opcoes)
   return a.tipo === 'segura' ? a.mensagem : null
 }
 
 /* A ÚNICA função que as telas devem usar para obter o texto de um erro.
-   O 2º parâmetro existe só por compatibilidade com chamadas antigas e é ignorado:
-   a mensagem padrão é sempre a mesma em todo o sistema. */
-// eslint-disable-next-line no-unused-vars
-export function getErrorMessage(err, _legado) {
-  const a = analisar(err)
+   `opcoes` é opcional: { ordemCampos: ['nome', 'email', 'senha'] } define a ordem das mensagens de
+   validação (a do formulário). Qualquer outro 2º argumento (texto fixo de chamadas antigas) é
+   ignorado: a mensagem padrão é sempre a mesma em todo o sistema. */
+export function getErrorMessage(err, opcoes) {
+  const a = analisar(err, opcoes)
   switch (a.tipo) {
     case 'conexao':  return MENSAGEM_SEM_CONEXAO
     case 'segura':   return a.mensagem

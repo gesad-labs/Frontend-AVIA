@@ -2,6 +2,10 @@ import { createContext, useState, useCallback } from 'react'
 import { api, setToken, clearToken, parseJwt } from '../services/api'
 import { getErrorMessage, mensagemSeguraDoBack } from '../utils/errors'
 
+// Ordem dos campos nos formulários: as mensagens de validação seguem esta ordem, não a do back.
+const ORDEM_LOGIN    = { ordemCampos: ['email', 'senha'] }
+const ORDEM_CADASTRO = { ordemCampos: ['nome', 'email', 'senha'] }
+
 export const AuthContext = createContext(null)
 
 /* localStorage keys */
@@ -43,8 +47,8 @@ export function AuthProvider({ children }) {
       return { success: true }
     } catch (err) {
       // 401 no login = credencial inválida, mesmo que o back não mande texto utilizável.
-      const msg = mensagemSeguraDoBack(err)
-        ?? (err?.status === 401 ? 'E-mail ou senha inválidos.' : getErrorMessage(err))
+      const msg = mensagemSeguraDoBack(err, ORDEM_LOGIN)
+        ?? (err?.status === 401 ? 'E-mail ou senha inválidos.' : getErrorMessage(err, ORDEM_LOGIN))
       return { success: false, errors: { detail: msg } }
     } finally {
       setAuthLoading(false)
@@ -59,7 +63,7 @@ export function AuthProvider({ children }) {
       await api.post('/auth/cadastro', { nome: name, email, senha: password })
       return { success: true }
     } catch (err) {
-      return { success: false, errors: { detail: getErrorMessage(err) } }
+      return { success: false, errors: { detail: getErrorMessage(err, ORDEM_CADASTRO) } }
     } finally {
       setAuthLoading(false)
     }
