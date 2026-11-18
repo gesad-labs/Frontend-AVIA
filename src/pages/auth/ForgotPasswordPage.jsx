@@ -23,17 +23,26 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
+    setError('')
     setLoading(true)
     try {
       await api.post('/auth/recuperacao-senha', { email })
-    } catch {
-      // Don't reveal whether email exists — always show "sent"
+      setSent(true)
+    } catch (err) {
+      if (err.status === 400) {
+        // Real validation failure (malformed email) — show it
+        setError(err.body?.message ?? 'E-mail inválido.')
+      } else {
+        // Backend always returns 204 even if the e-mail doesn't exist
+        // (anti-enumeration) — any other error still shows "sent"
+        setSent(true)
+      }
     } finally {
       setLoading(false)
-      setSent(true)
     }
   }
 
@@ -56,13 +65,13 @@ export default function ForgotPasswordPage() {
           {sent ? (
             <div className={styles.success}>
               <p>
-                Solicitação enviada para <strong>{email}</strong>.{' '}
-                Em desenvolvimento, o link de redefinição é impresso no{' '}
-                <strong>console do servidor</strong> (backend).
+                Se houver uma conta com o e-mail <strong>{email}</strong>, enviamos
+                um link de redefinição. Verifique sua caixa de entrada (e o spam).
               </p>
             </div>
           ) : (
             <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              {error && <p className={styles.error}>{error}</p>}
               <div className={styles.field}>
                 <label htmlFor="email">E-MAIL CADASTRADO</label>
                 <div className={styles.inputWrapper}>
@@ -93,10 +102,6 @@ export default function ForgotPasswordPage() {
 
         </div>
 
-        <p className={styles.support}>
-          Problemas com o acesso?{' '}
-          <a href="mailto:suporte@avia.com">Contate o suporte</a>
-        </p>
       </div>
     </div>
   )
