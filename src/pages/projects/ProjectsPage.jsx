@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { projetoService } from '../../services/projetoService'
 import { useAuth } from '../../hooks/useAuth'
-import LeaveProjectModal from '../../components/project/LeaveProjectModal'
 import styles from './ProjectsPage.module.css'
 import { souGerenteDoProjeto } from '../../utils/membros'
+import { loadSavedStatuses, saveStatus } from '../../services/projectStatusStore'
 
 import { getErrorMessage } from '../../utils/errors'
 /* ── Icons ── */
@@ -145,34 +145,6 @@ function avatarColor(seed) {
 
 const FILTERS = ['Todos', 'Em Andamento', 'Concluídos', 'Planejamento']
 const PAGE_SIZE = 8
-
-/* ── Project status persistence (localStorage) ── */
-const STATUS_LS_KEY = 'avia_project_statuses'
-function loadSavedStatuses() {
-  try { return JSON.parse(localStorage.getItem(STATUS_LS_KEY) || '{}') }
-  catch { return {} }
-}
-function removeSavedStatus(id) {
-  try {
-    const saved = loadSavedStatuses()
-    delete saved[String(id)]
-    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
-  } catch { /* ignore quota/parse errors */ }
-}
-function saveStatus(id, status) {
-  try {
-    const saved = loadSavedStatuses()
-    saved[String(id)] = status
-    localStorage.setItem(STATUS_LS_KEY, JSON.stringify(saved))
-  } catch { /* ignore quota/parse errors */ }
-}
-
-/* ── Projetos arquivados (localStorage) ── */
-const ARCHIVED_LS_KEY = 'avia_project_archived'
-function loadArchivedIds() {
-  try { return JSON.parse(localStorage.getItem(ARCHIVED_LS_KEY) || '[]') }
-  catch { return [] }
-}
 
 /* ── Role icons for step 2 ── */
 const MemIcon = () => (
@@ -440,8 +412,15 @@ function CardMenu({ projetoId, onClose, onStatusChange, onArquivar, podeAlterarS
     function handleClick(e) {
       if (ref.current && !ref.current.contains(e.target)) onClose()
     }
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [onClose])
 
   function copyLink() {
@@ -498,7 +477,7 @@ function CardMenu({ projetoId, onClose, onStatusChange, onArquivar, podeAlterarS
 }
 
 /* ── Project List Row ── */
-function ProjectListRow({ projeto, onStatusChange, onSair, onArquivar }) {
+function ProjectListRow({ projeto, onStatusChange, onArquivar }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg } = getTheme(projeto.id)
@@ -529,6 +508,8 @@ function ProjectListRow({ projeto, onStatusChange, onSair, onArquivar }) {
           style={{ background: 'var(--color-surface)', color: 'var(--color-text-secondary)' }}
           onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
           aria-label="Mais opções"
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
         >
           <MoreIcon />
         </button>
@@ -538,9 +519,8 @@ function ProjectListRow({ projeto, onStatusChange, onSair, onArquivar }) {
             projetoNome={projeto.nome}
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
-            onSair={onSair}
             onArquivar={onArquivar}
-            podeAlterarStatus = {podeAlterarStatus}
+            podeAlterarStatus={podeAlterarStatus}
           />
         )}
       </div>
@@ -550,7 +530,7 @@ function ProjectListRow({ projeto, onStatusChange, onSair, onArquivar }) {
 }
 
 /* ── Project Card ── */
-function ProjectCard({ projeto, onStatusChange, onSair, onArquivar }) {
+function ProjectCard({ projeto, onStatusChange, onArquivar }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const { bg, Icon } = getTheme(projeto.id)
@@ -571,6 +551,8 @@ function ProjectCard({ projeto, onStatusChange, onSair, onArquivar }) {
           className={styles.cardMenuBtn}
           onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
           aria-label="Mais opções"
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
         >
           <MoreIcon />
         </button>
@@ -580,9 +562,8 @@ function ProjectCard({ projeto, onStatusChange, onSair, onArquivar }) {
             projetoNome={projeto.nome}
             onClose={() => setMenuOpen(false)}
             onStatusChange={onStatusChange}
-            onSair={onSair}
             onArquivar={onArquivar}
-            podeAlterarStatus = {podeAlterarStatus}
+            podeAlterarStatus={podeAlterarStatus}
           />
         )}
       </div>
@@ -647,19 +628,13 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [view, setView] = useState('grid')
-  const [leaving, setLeaving] = useState(null) // { id, nome } do projeto que o usuário quer deixar
 
   const fetchProjetos = useCallback(async () => {
     setLoading(true); setError('')
     try {
       const data = await projetoService.listar()
       const saved = loadSavedStatuses()
-      const archived = loadArchivedIds()
-      setProjetos(
-        data
-          .filter(p => !archived.includes(String(p.id)))
-          .map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p)
-      )
+      setProjetos(data.map(p => saved[String(p.id)] ? { ...p, _status: saved[String(p.id)] } : p))
     }
     catch { setError('Erro ao carregar projetos.') }
     finally { setLoading(false) }
@@ -688,23 +663,13 @@ export default function ProjectsPage() {
     setShowModal(false)
   }
 
-  // US012 — abre o modal; a regra de gerente único é tratada dentro dele.
-  function handleSair(id) {
-    const projeto = projetos.find(p => p.id === id)
-    setLeaving({ id, nome: projeto?.nome ?? 'este projeto' })
+  function handleArquivar() {
+    // por enquanto nao tem chamada de api para arquivar
   }
-
-  // Backend já removeu o vínculo: o projeto some da lista na hora.
-  function handleLeft() {
-    setProjetos(prev => prev.filter(p => p.id !== leaving.id))
-    removeSavedStatus(leaving.id)
-    setLeaving(null)
-  }
-
 
   function handleStatusChange(id, label) {
     const projeto = projetos.find(p => p.id === id)
-    if(!souGerenteDoProjeto(projeto)) return
+    if (!souGerenteDoProjeto(projeto)) return
     const map = { 'Em andamento': 'EM ANDAMENTO', 'Planejamento': 'PLANEJAMENTO', 'Concluído': 'CONCLUÍDO' }
     const newStatus = map[label]
     setProjetos(prev => prev.map(p => p.id === id ? { ...p, _status: newStatus } : p))
@@ -765,13 +730,13 @@ export default function ProjectsPage() {
       ) : view === 'grid' ? (
         <div className={styles.grid}>
           {paginated.map(p => (
-            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair} />
+            <ProjectCard key={p.id} projeto={p} onStatusChange={handleStatusChange} onArquivar={handleArquivar} />
           ))}
         </div>
       ) : (
         <div className={styles.listView}>
           {paginated.map(p => (
-            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onSair={handleSair}  />
+            <ProjectListRow key={p.id} projeto={p} onStatusChange={handleStatusChange} onArquivar={handleArquivar} />
           ))}
         </div>
       )}
@@ -780,15 +745,6 @@ export default function ProjectsPage() {
 
       {showModal && (
         <NovoProjetoModal onClose={() => setShowModal(false)} onSuccess={handleNewProject} />
-      )}
-
-      {leaving && (
-        <LeaveProjectModal
-          projectId={leaving.id}
-          projectName={leaving.nome}
-          onClose={() => setLeaving(null)}
-          onLeft={handleLeft}
-        />
       )}
     </div>
   )
