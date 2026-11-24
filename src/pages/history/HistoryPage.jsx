@@ -261,7 +261,7 @@ export default function HistoryPage() {
                                                     <tr key={t.id}>
                                                         <td className={styles.cardCell}>
                                                             <Link to={`/project/${projectId}/task/${t.id}`} className={styles.cardLink}>
-                                                                <span className={styles.cardId}>#{t.id}</span> {t.titulo}
+                                                                <span className={styles.cardId}>#{t.numeroTarefa}</span> {t.titulo}
                                                             </Link>
                                                             {t.tarefaParenteId != null && <span className={styles.subTag}>subcard de #{t.tarefaParenteId}</span>}
                                                         </td>
