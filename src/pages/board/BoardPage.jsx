@@ -728,7 +728,7 @@ function TaskCard({ tarefa, projectId, notifs = [], onDetail, onEdit, onDelete, 
     >
       {/* Top row: ID + notifications + menu */}
       <div className={styles.cardTopRow}>
-        <span className={styles.cardId}>APS-{tarefa.id}</span>
+        <span className={styles.cardId}>#{tarefa.numeroTarefa}</span>
         <div className={styles.cardTopRowActions}>
           <CardNotifBell notifs={notifs} />
           <CardMenu tarefa={tarefa} onDetail={onDetail} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} canDelete={canDelete} />
