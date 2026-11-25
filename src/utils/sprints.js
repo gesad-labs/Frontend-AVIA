@@ -93,3 +93,19 @@ export async function verificarEncerramento(servico, projectId, sprint) {
   const atual = sprints.find(s => s.id === sprint.id) ?? sprint
   return podeEncerrar(atual, Array.isArray(resTarefas) ? resTarefas : [])
 }
+
+/* ── Sprint concluída = somente consulta (US019) ─────────────────────
+   O back já recusa estimar (Planning Poker), excluir, vincular e editar
+   subtarefas de atividades de sprint concluída. O front deixa de oferecer
+   essas ações, em vez de deixar o usuário clicar e receber um erro. */
+export const MSG_SPRINT_CONCLUIDA =
+  'Sprint concluída: as atividades ficam somente para consulta e não podem ser estimadas.'
+
+export function sprintConcluida(sprint) {
+  return sprint?.status === SPRINT.CONCLUIDA
+}
+
+export function sprintDaTarefa(tarefa, sprints) {
+  if (tarefa?.sprintId == null) return null
+  return (sprints ?? []).find(s => s.id === tarefa.sprintId) ?? null
+}

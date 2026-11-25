@@ -5,7 +5,7 @@ import { projetoService } from '../../services/projetoService'
 import { getErrorMessage } from '../../utils/errors'
 import {
   ROTULO_SPRINT, SPRINT, agruparSprints, dicaDaSprint, podeEncerrar, podeIniciar,
-  verificarEncerramento, verificarInicio,
+  sprintConcluida, verificarEncerramento, verificarInicio,
 } from '../../utils/sprints'
 import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './BacklogPage.module.css'
@@ -169,7 +169,7 @@ function MoveTaskModal({ tarefa, sprints, projectId, onClose, onMoved }) {
 
   const options = [
     { val: BACKLOG_VAL, label: 'Backlog Geral' },
-    ...sprints.map(s => ({ val: String(s.id), label: s.nome })),
+    ...sprints.filter(s => !sprintConcluida(s)).map(s => ({ val: String(s.id), label: s.nome })),
   ].filter(opt => {
     if (opt.val === BACKLOG_VAL) return currentId !== null
     return Number(opt.val) !== currentId
@@ -469,7 +469,7 @@ function AddTaskForm({ sprintId, projectId, membros, onAdded }) {
 }
 
 /* ── Task row — draggable ── */
-function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh, isGerente, canEditTarefas, futura = false }) {
+function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onRefresh, isGerente, canEditTarefas, futura = false, somenteLeitura = false }) {
   const navigate = useNavigate()
   const hasActivePoker = activePokerTasks?.has(tarefa.id)
   const [editOpen, setEditOpen] = useState(false)
@@ -505,12 +505,18 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
     styles.taskRow,
     tarefa.impedimento ? styles.taskImpedimento : '',
     dragging ? styles.taskRowDragging : '',
+    somenteLeitura ? styles.taskRowReadonly : '',
   ].filter(Boolean).join(' ')
 
   return (
     <>
-      <div className={rowCls} draggable onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className={styles.taskDragHandle} title="Arrastar"><GripIcon /></div>
+      <div
+        className={rowCls}
+        draggable={!somenteLeitura}
+        onDragStart={somenteLeitura ? undefined : handleDragStart}
+        onDragEnd={somenteLeitura ? undefined : handleDragEnd}
+      >
+        {!somenteLeitura && <div className={styles.taskDragHandle} title="Arrastar"><GripIcon /></div>}
         <div className={styles.taskLeft}>
           {tarefa.impedimento && (
             <span className={styles.impedimentoMark} title="Impedimento"><BlockIcon /> Impedimento</span>
@@ -525,17 +531,19 @@ function TaskRow({ tarefa, projectId, allSprints, membros, activePokerTasks, onR
         <div className={styles.taskRight}>
           {tarefa.responsaveis?.map(r => <AssigneeAvatar key={r.id} nome={r.nome} />)}
           {tarefa.estimativa > 0 && <span className={styles.taskPoints}>{tarefa.estimativa} pts</span>}
-          <button
-            className={`${styles.iconBtn} ${hasActivePoker ? styles.iconBtnPokerActive : ''}`}
-            title={hasActivePoker ? 'Estimativa Colaborativa — sessão ativa' : 'Estimativa Colaborativa'}
-            onClick={() => navigate(`/project/${projectId}/planning-poker/${tarefa.id}`)}
-          >
-            <PokerIcon />
-            {hasActivePoker && <span className={styles.pokerActiveDot} />}
-          </button>
-          {canEditTarefas !== false && <button className={styles.iconBtn} title="Detalhes" onClick={() => navigate(`/project/${projectId}/task/${tarefa.id}`)}><EditIcon /></button>}
-          {canEditTarefas !== false && <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>}
-          {isGerente && <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>}
+          {!somenteLeitura && (
+            <button
+              className={`${styles.iconBtn} ${hasActivePoker ? styles.iconBtnPokerActive : ''}`}
+              title={hasActivePoker ? 'Estimativa Colaborativa — sessão ativa' : 'Estimativa Colaborativa'}
+              onClick={() => navigate(`/project/${projectId}/planning-poker/${tarefa.id}`)}
+            >
+              <PokerIcon />
+              {hasActivePoker && <span className={styles.pokerActiveDot} />}
+            </button>
+          )}
+          {(somenteLeitura || canEditTarefas !== false) && <button className={styles.iconBtn} title={somenteLeitura ? 'Ver detalhes' : 'Detalhes'} onClick={() => navigate(`/project/${projectId}/task/${tarefa.id}`)}><EditIcon /></button>}
+          {!somenteLeitura && canEditTarefas !== false && <button className={styles.iconBtn} title="Mover" onClick={() => setMoveOpen(true)}><MoveIcon /></button>}
+          {!somenteLeitura && isGerente && <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Remover" disabled={removing} onClick={handleRemove}><TrashIcon /></button>}
         </div>
       </div>
 
@@ -597,6 +605,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
 
   const ehFutura   = sprint.status === SPRINT.FUTURA
   const ehAtiva    = sprint.status === SPRINT.ATIVA
+  const ehConcluida = sprintConcluida(sprint)  
   const inicio     = podeIniciar(sprint, allSprints)
   const encerra    = podeEncerrar(sprint, tarefas)
   const dica       = isGerente ? dicaDaSprint(sprint, allSprints, tarefas) : ''
@@ -637,15 +646,17 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
     styles.sprintCard,
     dropZone.isDragOver ? styles.dropTargetActive   : '',
     dropZone.dropping   ? styles.dropTargetDropping : '',
+    ehConcluida         ? styles.sprintCardConcluida : '',
   ].filter(Boolean).join(' ')
 
+  /* Sprint concluída não recebe cards: sem handlers de soltar. */
   return (
     <div
       className={cardCls}
-      onDragOver={dropZone.onDragOver}
-      onDragEnter={dropZone.onDragEnter}
-      onDragLeave={dropZone.onDragLeave}
-      onDrop={dropZone.onDrop}
+      onDragOver={ehConcluida ? undefined : dropZone.onDragOver}
+      onDragEnter={ehConcluida ? undefined : dropZone.onDragEnter}
+      onDragLeave={ehConcluida ? undefined : dropZone.onDragLeave}
+      onDrop={ehConcluida ? undefined : dropZone.onDrop}
     >
       <div className={styles.sprintCardHeader}>
         <button className={styles.collapseBtn} onClick={() => setCollapsed(c => !c)} aria-label="toggle">
@@ -677,20 +688,21 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
         </div>
       </div>
       {dica && <p className={styles.sprintHint}>{dica}</p>}
+      {ehConcluida && <p className={styles.sprintHintConcluida}>Sprint concluída — somente consulta: não é possível estimar, mover nem adicionar atividades.</p>}
 
       {!collapsed && (
         <div className={styles.sprintCardBody}>
-          {canCreateTarefas && (
+          {canCreateTarefas && !ehConcluida && (
             <AddTaskForm sprintId={sprint.id} projectId={projectId} membros={membros} onAdded={onRefresh} />
           )}
           {tarefas.length === 0 ? (
             dropZone.isDragOver
               ? <div className={styles.dropHint}>Soltar aqui para adicionar à sprint</div>
-              : <p className={styles.emptyNote}>Nenhum card. Adicione acima ou arraste do backlog.</p>
+              : <p className={styles.emptyNote}>{ehConcluida ? 'Nenhum card nesta sprint.' : 'Nenhum card. Adicione acima ou arraste do backlog.'}</p>
           ) : (
             <div className={styles.taskList}>
               {tarefas.map(t => (
-                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} isGerente={isGerente} canEditTarefas={canCreateTarefas} futura={ehFutura} />
+                <TaskRow key={t.id} tarefa={t} projectId={projectId} allSprints={allSprints} membros={membros} activePokerTasks={activePokerTasks} onRefresh={onRefresh} isGerente={isGerente} canEditTarefas={canCreateTarefas} futura={ehFutura} somenteLeitura={ehConcluida} />
               ))}
               {dropZone.isDragOver && <div className={styles.dropHint}>Soltar aqui</div>}
             </div>
@@ -698,7 +710,7 @@ function SprintSection({ sprint, tarefas, projectId, allSprints, membros, active
         </div>
       )}
 
-      {collapsed && dropZone.isDragOver && (
+      {collapsed && !ehConcluida && dropZone.isDragOver && (
         <div className={styles.collapsedDropHint}>Soltar aqui para adicionar à "{sprint.nome}"</div>
       )}
     </div>
