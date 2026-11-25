@@ -5,6 +5,7 @@ import { createPokerClient } from '../../services/planningPokerSocket'
 import styles from './PlanningPokerPage.module.css'
 
 import { getErrorMessage } from '../../utils/errors'
+import { MSG_SPRINT_CONCLUIDA, sprintConcluida, sprintDaTarefa } from '../../utils/sprints'
 /* ─── Fibonacci deck ─── */
 const FIBONACCI = [
   { label: '1', value: 1, sub: 'STORY POINT' },
@@ -85,6 +86,7 @@ export default function PlanningPokerPage() {
   const [membros, setMembros] = useState([])
   const [loading, setLoading] = useState(true)
   const [criando, setCriando] = useState(false)
+  const [sprintFechada, setSprintFechada] = useState(false)   // sprint da atividade concluída
   const [selectedCard, setSelectedCard] = useState(null)
   const [estimativaInput, setEstimativaInput] = useState('')
   const stompRef = useRef(null)
@@ -98,6 +100,9 @@ export default function PlanningPokerPage() {
   const isFinalizada = sessao?.status === 'FINALIZADA'
   const isCancelada = sessao?.status === 'CANCELADA'
   const isAtiva = isVotando || isRevelada
+  /* Sprint concluída: nada de votar/revelar/finalizar (só cancelar uma sessão que ficou pendurada). */
+  const votacaoAberta = isVotando && !sprintFechada
+  const podeConduzir = isGerente && !sprintFechada
 
   const myParticipant = sessao?.participantes?.find(p => p.usuarioId === currentUser?.id)
   const votouNaRodada = myParticipant?.votou === true
@@ -120,13 +125,15 @@ export default function PlanningPokerPage() {
     async function load() {
       setLoading(true)
       try {
-        const [tarefaData, userData, membrosData, sessaoData] = await Promise.all([
+        const [tarefaData, userData, membrosData, sessaoData, sprintsData] = await Promise.all([
           projetoService.buscarTarefa(projectId, taskId),
           projetoService.buscarUsuarioAtual(),
           projetoService.listarMembros(projectId),
           projetoService.buscarSessaoAtivaPoker(projectId, taskId),
+          projetoService.listarSprints(projectId).catch(() => []),   // se falhar, o back ainda recusa com 409
         ])
         setTarefa(tarefaData)
+        setSprintFechada(sprintConcluida(sprintDaTarefa(tarefaData, Array.isArray(sprintsData) ? sprintsData : [])))
         setCurrentUser(userData)
         setMembros(Array.isArray(membrosData) ? membrosData : [])
         if (sessaoData) setSessao(sessaoData)
@@ -169,6 +176,7 @@ export default function PlanningPokerPage() {
   }
 
   async function handleCriarSessao() {
+    if (sprintFechada) return
     setCriando(true)
     try {
       const s = await projetoService.criarSessaoPoker(projectId, taskId)
@@ -181,7 +189,7 @@ export default function PlanningPokerPage() {
   }
 
   function handleVotar() {
-    if (selectedCard === null || !sessao) return
+    if (selectedCard === null || !sessao || sprintFechada) return
     const client = stompRef.current
     if (!client?.connected) {
       alert('Conexão não estabelecida. Aguarde e tente novamente.')
@@ -218,6 +226,23 @@ export default function PlanningPokerPage() {
       <div className={styles.page}>
         <div className={styles.emptyState}>
           <p className={styles.emptyDesc}>Carregando sessão...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!sessao && sprintFechada) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>🔒</div>
+          <h2 className={styles.emptyTitle}>Sprint concluída</h2>
+          <p className={styles.emptyDesc}>
+            <strong>{tarefa?.titulo}</strong> pertence a uma sprint concluída. {MSG_SPRINT_CONCLUIDA}
+          </p>
+          <Link to={`/project/${projectId}/backlog`} className={styles.backLink}>
+            ← Voltar ao Backlog
+          </Link>
         </div>
       </div>
     )
@@ -301,6 +326,13 @@ export default function PlanningPokerPage() {
             )}
           </div>
 
+          {sprintFechada && (
+            <div className={styles.avisoSprintFechada} role="alert">
+              {MSG_SPRINT_CONCLUIDA} Esta sessão ficou aberta antes do encerramento da sprint
+              {isGerente ? ': cancele-a para liberá-la.' : '.'}
+            </div>
+          )}
+
           <h1 className={styles.tarefaTitulo}>{tarefa?.titulo}</h1>
           {tarefa?.descricao && tarefa.descricao !== tarefa.titulo && (
             <p className={styles.tarefaDesc}>{tarefa.descricao}</p>
@@ -320,10 +352,10 @@ export default function PlanningPokerPage() {
                   className={[
                     styles.fibCard,
                     active ? styles.fibCardSelected : '',
-                    isVotando ? styles.fibCardClickable : styles.fibCardDisabled,
+                    votacaoAberta ? styles.fibCardClickable : styles.fibCardDisabled,
                   ].filter(Boolean).join(' ')}
-                  onClick={() => isVotando && setSelectedCard(value)}
-                  disabled={!isVotando}
+                  onClick={() => votacaoAberta && setSelectedCard(value)}
+                  disabled={!votacaoAberta}
                 >
                   <span className={styles.fibValue}>{label}</span>
                   <span className={styles.fibSub}>{sub}</span>
@@ -344,7 +376,7 @@ export default function PlanningPokerPage() {
 
             <div className={styles.barPontuacao}>
               <span className={styles.barPontuacaoLabel}>PONTUAÇÃO FINAL</span>
-              {isRevelada && isGerente ? (
+              {isRevelada && podeConduzir ? (
                 <input
                   className={styles.estimativaInput}
                   type="number"
@@ -361,7 +393,7 @@ export default function PlanningPokerPage() {
             </div>
 
             <div className={styles.barActions}>
-              {isVotando && (
+              {votacaoAberta && (
                 <button
                   className={styles.btnPrimary}
                   onClick={handleVotar}
@@ -370,12 +402,12 @@ export default function PlanningPokerPage() {
                   {votouNaRodada ? 'Alterar Voto' : 'Votar'}
                 </button>
               )}
-              {isVotando && isGerente && (
+              {votacaoAberta && isGerente && (
                 <button className={styles.btnSecondary} onClick={handleRevelar}>
                   Revelar Votos
                 </button>
               )}
-              {isRevelada && isGerente && (
+              {isRevelada && podeConduzir && (
                 <>
                   <button className={styles.btnSecondary} onClick={handleNovaRodada}>
                     Nova Rodada

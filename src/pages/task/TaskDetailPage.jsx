@@ -4,6 +4,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { projetoService } from '../../services/projetoService'
 import { getErrorMessage } from '../../utils/errors'
+import { sprintConcluida, sprintDaTarefa } from '../../utils/sprints'
 import {
   ACCEPT_ARQUIVOS, TAMANHO_MAXIMO, TIPOS_LEGIVEIS, abrirBlobEmNovaAba, formatarTamanho,
   lerAnexo, mensagemErroAnexo, metaDoAnexo, salvarBlob, validarArquivo,
@@ -403,6 +404,7 @@ export default function TaskDetailPage() {
 
   /* Core data */
   const [tarefa, setTarefa] = useState(null)
+  const [sprintFechada, setSprintFechada] = useState(false)   // US019: sprint concluída
   const [membros, setMembros] = useState([])
   const [comentarios, setComentarios] = useState([])
   const [anexos, setAnexos] = useState([])
@@ -440,15 +442,17 @@ export default function TaskDetailPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const [t, m, c, a, subs, todas] = await Promise.all([
+      const [t, m, c, a, subs, todas, sprs] = await Promise.all([
         projetoService.buscarTarefa(projectId, taskId),
         projetoService.listarMembros(projectId),
         projetoService.listarComentarios(projectId, taskId).catch(() => []),
         projetoService.listarAnexos(projectId, taskId).catch(() => []),
         projetoService.listarSubtarefas(projectId, taskId).catch(() => []),
         projetoService.listarTarefas(projectId).catch(() => []),
+        projetoService.listarSprints(projectId).catch(() => []),
       ])
       setTarefa(t)
+      setSprintFechada(sprintConcluida(sprintDaTarefa(t, Array.isArray(sprs) ? sprs : [])))
       setSubcards(Array.isArray(subs) ? subs : [])
       setTodasTarefas(Array.isArray(todas) ? todas : [])
       setMembros(Array.isArray(m) ? m : [])
@@ -754,6 +758,8 @@ export default function TaskDetailPage() {
             <IconLink /> Vincular Tarefa
           </button>
           <button className={styles.actionBtn}
+            disabled={sprintFechada}
+            title={sprintFechada ? 'Sprint concluída: atividade não pode ser estimada.' : ''}
             onClick={() => navigate(`/project/${projectId}/planning-poker/${taskId}`)}>
             <IconPoker /> Estimativa Colaborativa
           </button>

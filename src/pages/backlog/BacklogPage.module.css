@@ -836,3 +836,9 @@
   border-radius: 8px; color: #b91c1c; font-size: 13px; font-weight: 600; line-height: 1.5;
 }
 .avisoSprint button { background: none; border: none; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+
+/* ── US019: sprint concluída = somente consulta ── */
+.sprintCardConcluida { background: var(--color-surface-muted, #f8fafc); }
+.sprintHintConcluida { margin: -4px 20px 10px; font-size: 12px; line-height: 1.5; color: #475569; }
+.taskRowReadonly { cursor: default; }
+.taskRowReadonly .taskTitle { color: #475569; }
